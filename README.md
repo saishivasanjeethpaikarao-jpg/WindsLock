@@ -7,6 +7,15 @@ apps, websites, URL paths, and private folders. It includes a branded desktop
 UI, tray controller, optional CLI, background enforcer, recovery flow, and pro
 startup tooling.
 
+## Documentation
+
+- [Brand Guide](docs/BRAND_GUIDE.md)
+- [Mind Maps](docs/MIND_MAPS.md)
+- [Workflows](docs/WORKFLOWS.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Windows And Linux Plan](docs/CROSS_PLATFORM_PLAN.md)
+- [Roadmap](docs/ROADMAP.md)
+
 ## What Works
 
 - Locks desktop apps by process name, such as `steam.exe`, or by full executable path.
