@@ -1,0 +1,13 @@
+.venv/
+files/
+__pycache__/
+*.pyc
+.pytest_cache/
+build/
+dist/
+*.spec
+test_appdata_tmp/
+*.log
+*.tmp
+*.locked
+assets/*.bak
