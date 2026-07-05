@@ -7,6 +7,7 @@ from pathlib import Path
 import re
 
 import config as cfg
+from database import EncryptedDatabase
 import override_manager
 
 
@@ -26,23 +27,23 @@ def normalize_domain(domain: str) -> str:
 
 def add_blocked_site(domain: str, password: str) -> None:
     normalized = normalize_domain(domain)
-    config = cfg.load_config(password)
+    config = EncryptedDatabase(password)._data
     sites = list(config.get("blocked_sites", []))
     if normalized not in sites:
         sites.append(normalized)
         config["blocked_sites"] = sorted(sites)
-        cfg.save_config(config, password)
+        EncryptedDatabase(password).save_dict(config)
 
 
 def remove_blocked_site(domain: str, password: str) -> None:
     normalized = normalize_domain(domain)
-    config = cfg.load_config(password)
+    config = EncryptedDatabase(password)._data
     config["blocked_sites"] = [site for site in config.get("blocked_sites", []) if site != normalized]
-    cfg.save_config(config, password)
+    EncryptedDatabase(password).save_dict(config)
 
 
 def list_blocked_sites(password: str) -> list[str]:
-    return list(cfg.load_config(password).get("blocked_sites", []))
+    return list(EncryptedDatabase(password)._data.get("blocked_sites", []))
 
 
 def get_default_hosts_path() -> Path:
@@ -71,10 +72,10 @@ def _strip_existing_block(text: str) -> str:
 
 def apply_hosts_block(password: str, hosts_path: str | Path | None = None) -> Path:
     """Apply current blocked sites to hosts file. Requires admin on Windows."""
-    config = cfg.load_config(password)
+    config = EncryptedDatabase(password)._data
     path = apply_hosts_block_with_config(config, hosts_path)
     config["settings"]["website_hosts_applied"] = bool(config.get("blocked_sites", []))
-    cfg.save_config(config, password)
+    EncryptedDatabase(password).save_dict(config)
     return path
 
 

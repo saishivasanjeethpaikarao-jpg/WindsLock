@@ -8,6 +8,7 @@ import subprocess
 import sys
 
 import config as cfg
+from database import EncryptedDatabase
 
 
 RUN_KEY = r"Software\Microsoft\Windows\CurrentVersion\Run"
@@ -36,9 +37,9 @@ def enable_startup(password: str) -> None:
 
     with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY, 0, winreg.KEY_SET_VALUE) as key:
         winreg.SetValueEx(key, APP_VALUE, 0, winreg.REG_SZ, _command())
-    config = cfg.load_config(password)
+    config = EncryptedDatabase(password)._data
     config["settings"]["run_on_startup"] = True
-    cfg.save_config(config, password)
+    EncryptedDatabase(password).save_dict(config)
 
 
 def disable_startup(password: str) -> None:
@@ -51,9 +52,9 @@ def disable_startup(password: str) -> None:
             winreg.DeleteValue(key, APP_VALUE)
         except FileNotFoundError:
             pass
-    config = cfg.load_config(password)
+    config = EncryptedDatabase(password)._data
     config["settings"]["run_on_startup"] = False
-    cfg.save_config(config, password)
+    EncryptedDatabase(password).save_dict(config)
 
 
 def install_scheduled_task(password: str, launch_tray: bool = True) -> None:
@@ -85,10 +86,10 @@ def install_scheduled_task(password: str, launch_tray: bool = True) -> None:
     )
     if result.returncode != 0:
         raise RuntimeError(result.stderr.strip() or result.stdout.strip() or "schtasks create failed")
-    config = cfg.load_config(password)
+    config = EncryptedDatabase(password)._data
     config["settings"]["run_on_startup"] = True
     config["settings"]["startup_task"] = TASK_NAME
-    cfg.save_config(config, password)
+    EncryptedDatabase(password).save_dict(config)
 
 
 def uninstall_scheduled_task(password: str | None = None) -> None:
@@ -103,7 +104,7 @@ def uninstall_scheduled_task(password: str | None = None) -> None:
     if result.returncode != 0 and "cannot find" not in (result.stderr + result.stdout).lower():
         raise RuntimeError(result.stderr.strip() or result.stdout.strip() or "schtasks delete failed")
     if password:
-        config = cfg.load_config(password)
+        config = EncryptedDatabase(password)._data
         config["settings"]["run_on_startup"] = False
         config["settings"]["startup_task"] = ""
-        cfg.save_config(config, password)
+        EncryptedDatabase(password).save_dict(config)

@@ -9,6 +9,8 @@ import site_blocker
 
 class RuleTests(unittest.TestCase):
     def setUp(self):
+        from database import EncryptedDatabase
+        EncryptedDatabase.reset_cache()
         self.tempdir = tempfile.TemporaryDirectory()
         os.environ[config.ENV_APP_DIR] = self.tempdir.name
         self.old_iterations = config.ITERATIONS

@@ -1,3 +1,4 @@
+from database import EncryptedDatabase
 from datetime import timedelta
 import os
 import tempfile
@@ -10,6 +11,8 @@ import url_rule_engine
 
 class OverrideAndUrlPathTests(unittest.TestCase):
     def setUp(self):
+        from database import EncryptedDatabase
+        EncryptedDatabase.reset_cache()
         self.tempdir = tempfile.TemporaryDirectory()
         os.environ[config.ENV_APP_DIR] = self.tempdir.name
         self.old_iterations = config.ITERATIONS
@@ -25,7 +28,7 @@ class OverrideAndUrlPathTests(unittest.TestCase):
     def test_wrong_phrase_is_denied_and_logged(self):
         result = override_manager.request_override("test password", "app", "notepad.exe", "wrong")
         self.assertEqual(override_manager.STATUS_DENIED, result["status"])
-        events = config.load_config("test password")["audit_log"]
+        events = EncryptedDatabase("test password")._data["audit_log"]
         self.assertEqual("denied", events[-1]["action"])
 
     def test_correct_phrase_cooldown_then_active_then_relocked(self):
@@ -37,7 +40,7 @@ class OverrideAndUrlPathTests(unittest.TestCase):
         )
         self.assertEqual(override_manager.STATUS_COOLDOWN, result["status"])
 
-        data = config.load_config("test password")
+        data = EncryptedDatabase("test password")._data
         self.assertFalse(override_manager.is_overridden(data, "app", "notepad.exe", override_manager.utc_now()))
         future = override_manager.from_iso(result["ready_at"]) + timedelta(seconds=1)
         self.assertTrue(override_manager.is_overridden(data, "app", "notepad.exe", future))
@@ -47,7 +50,7 @@ class OverrideAndUrlPathTests(unittest.TestCase):
 
     def test_url_path_rule_matches_only_path_prefix(self):
         url_rule_engine.add_path_rule("youtube.com", "/shorts", "test password")
-        data = config.load_config("test password")
+        data = EncryptedDatabase("test password")._data
 
         blocked = url_rule_engine.match_url("https://www.youtube.com/shorts/abc", data)
         allowed = url_rule_engine.match_url("https://www.youtube.com/watch?v=abc", data)

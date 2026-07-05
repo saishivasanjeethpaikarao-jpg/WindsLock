@@ -9,6 +9,7 @@ import time
 import app_blocker
 import audit_log
 import config as cfg
+from database import EncryptedDatabase
 import focus_manager
 import override_manager
 import site_blocker
@@ -74,7 +75,7 @@ def run_forever(poll_interval: float = POLL_INTERVAL_SECONDS) -> None:
                     changed = True
 
             if changed:
-                cfg.save_config_for_background(config)
+                EncryptedDatabase(is_background=True).save_dict(config)
             time.sleep(poll_interval)
     finally:
         try:

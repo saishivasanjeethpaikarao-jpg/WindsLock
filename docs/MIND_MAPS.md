@@ -1,174 +1,33 @@
-# Windslock Mind Maps
+# Windslock Mind Maps & Architecture Diagrams
 
-These maps show the product as a complete focus-security system.
+These Mermaid.js diagrams outline the high-level architecture, database flows, and security measures of the application.
 
-## Product Mind Map
-
+## Pro UI Flow & Architecture
 ```mermaid
-mindmap
-  root((Windslock))
-    Locking
-      Desktop apps
-        Process name
-        Executable path
-        Running app picker
-      Websites
-        Whole domain
-        Hosts file
-        Rollback markers
-      URL paths
-        mitmproxy addon
-        HTTPS certificate setup
-        Path prefixes
-      Folders
-        Encrypted .locked archive
-        Safe extraction
-        Wrong-password protection
-    Focus
-      Presets
-        Deep Work
-        Study Mode
-        Social Detox
-      Timed sessions
-      Weekly schedules
-      Schedule-only mode
-    Overrides
-      Exact commitment phrase
-      Instant denial
-      Cooldown
-      Limited unlock window
-      Auto re-lock
-      Audit log
-    Security
-      Encrypted config
-      DPAPI background key
-      Recovery codes
-      ACL hardening
-      Admin-bypass honesty
-    Pro UX
-      Desktop UI
-      Tray controller
-      Startup task
-      Portable EXE build
-      README and docs
+graph TD
+    UI[Windslock UI (CustomTkinter)]
+    UI --> DB[EncryptedDatabase]
+    UI --> Control[Enforcement Control]
+    UI --> Overrides[Override / Friction Manager]
+    UI --> Proxy[Path-Level Proxy]
+
+    Control --> Enforcer[Background Enforcer]
+    Enforcer --> Process[Process Watcher]
+    Enforcer --> DB
 ```
 
-## User Problem Mind Map
-
+## Security & Database Architecture
 ```mermaid
-mindmap
-  root((User Problems))
-    Distraction
-      Games
-      Social media
-      Video shorts
-      Infinite feeds
-    Privacy
-      Sensitive folders
-      Shared computer
-      Accidental access
-    Self-control
-      Impulsive unlocks
-      Late-night usage
-      Study/work windows
-    Trust
-      Do not lose data
-      Do not get locked out
-      Clear rollback path
-      Honest limits
-    Convenience
-      No guessing process names
-      One-click presets
-      Tray status
-      Start with Windows
-```
+graph TD
+    Password[Master Password] --> PBKDF2
+    PBKDF2 --> DataKey[Unlock Master Data Key]
 
-## Enforcement Mind Map
+    Recovery[Recovery Codes] --> PBKDF2_2[PBKDF2 Verification]
+    PBKDF2_2 --> DataKey
 
-```mermaid
-mindmap
-  root((Enforcement))
-    App enforcement
-      psutil process scan
-      Name match
-      Path match
-      Kill blocked process
-      Log attempt
-    Domain enforcement
-      Hosts file
-      Begin/end markers
-      Admin required
-      Reapply when override changes
-    Path enforcement
-      Browser proxy
-      mitmproxy addon
-      URL parser
-      Block response
-      Certificate required for HTTPS
-    Folder enforcement
-      Encrypt folder
-      Verify archive
-      Remove original
-      Restore safely
-    State engine
-      Config decrypt
-      DPAPI service key
-      Override processing
-      Schedule checks
-```
+    Linux[Linux Keyring] --> DataKey
+    Windows[Windows DPAPI] --> DataKey
 
-## Trust And Recovery Mind Map
-
-```mermaid
-mindmap
-  root((Trust))
-    Password safety
-      No plaintext password
-      PBKDF2 verifier
-      Encrypted data key envelope
-    Local secrets
-      Windows DPAPI
-      Current-user scope
-      Background unlock
-    Recovery
-      One-time codes
-      Password reset
-      Code rotation
-    Data safety
-      Verify before deleting folder
-      Rollback hosts entries
-      Ignore dangerous folders
-      Tests
-    Transparency
-      Logs
-      Security limits
-      Admin bypass documented
-```
-
-## Platform Expansion Mind Map
-
-```mermaid
-mindmap
-  root((Cross Platform))
-    Windows
-      DPAPI
-      Task Scheduler
-      Hosts file
-      Tkinter
-      Tray
-      PyInstaller
-    Linux
-      Secret Service or keyring
-      systemd user service
-      /etc/hosts or nftables
-      Desktop files
-      AppImage/deb/rpm
-      Wayland/X11 differences
-    Shared core
-      Config schema
-      Rule engine
-      Override engine
-      Focus engine
-      Tests
-      Docs
+    DataKey --> DB[Encrypted JSON Data File]
+    DB --> Engine[Windslock Engine Rules]
 ```

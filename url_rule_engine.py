@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from urllib.parse import urlsplit
 
 import config as cfg
+from database import EncryptedDatabase
 import override_manager
 import site_blocker
 
@@ -35,23 +36,23 @@ def normalize_rule(domain: str, path_prefix: str) -> dict[str, str]:
 
 def add_path_rule(domain: str, path_prefix: str, password: str) -> None:
     rule = normalize_rule(domain, path_prefix)
-    config = cfg.load_config(password)
+    config = EncryptedDatabase(password)._data
     rules = list(config.get("blocked_url_paths", []))
     if rule not in rules:
         rules.append(rule)
         config["blocked_url_paths"] = sorted(rules, key=lambda item: (item["domain"], item["path_prefix"]))
-        cfg.save_config(config, password)
+        EncryptedDatabase(password).save_dict(config)
 
 
 def remove_path_rule(domain: str, path_prefix: str, password: str) -> None:
     rule = normalize_rule(domain, path_prefix)
-    config = cfg.load_config(password)
+    config = EncryptedDatabase(password)._data
     config["blocked_url_paths"] = [item for item in config.get("blocked_url_paths", []) if item != rule]
-    cfg.save_config(config, password)
+    EncryptedDatabase(password).save_dict(config)
 
 
 def list_path_rules(password: str) -> list[dict[str, str]]:
-    return list(cfg.load_config(password).get("blocked_url_paths", []))
+    return list(EncryptedDatabase(password)._data.get("blocked_url_paths", []))
 
 
 def match_url(url: str, config: dict) -> UrlMatch:

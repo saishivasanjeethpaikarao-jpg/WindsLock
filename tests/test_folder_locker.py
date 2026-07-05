@@ -1,3 +1,4 @@
+from database import EncryptedDatabase
 import os
 from pathlib import Path
 import tempfile
@@ -9,6 +10,8 @@ import folder_locker
 
 class FolderLockerTests(unittest.TestCase):
     def setUp(self):
+        from database import EncryptedDatabase
+        EncryptedDatabase.reset_cache()
         self.tempdir = tempfile.TemporaryDirectory()
         os.environ[config.ENV_APP_DIR] = os.path.join(self.tempdir.name, "appdata")
         self.old_iterations = config.ITERATIONS
@@ -40,7 +43,7 @@ class FolderLockerTests(unittest.TestCase):
         self.assertEqual("child secret", (nested / "child.txt").read_text(encoding="utf-8"))
         self.assertFalse(Path(locked_path).exists())
 
-        events = config.load_config("folder password")["audit_log"]
+        events = EncryptedDatabase("folder password")._data["audit_log"]
         self.assertEqual(["locked", "unlocked"], [event["action"] for event in events])
 
     def test_wrong_password_does_not_remove_locked_file(self):

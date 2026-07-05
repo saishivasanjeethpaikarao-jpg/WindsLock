@@ -3,13 +3,16 @@
 from __future__ import annotations
 
 import threading
+import customtkinter as ctk
 import tkinter as tk
-from tkinter import filedialog, messagebox, simpledialog, ttk
+from tkinter import filedialog, messagebox, simpledialog
+from tkinter import ttk
 
 import app_blocker
 import audit_log
 import brand
 import config as cfg
+from database import EncryptedDatabase
 import focus_manager
 import folder_locker
 import override_manager
@@ -55,10 +58,10 @@ class LoginDialog(simpledialog.Dialog):
         return self.password
 
     def buttonbox(self):
-        box = ttk.Frame(self)
-        ttk.Button(box, text="Unlock", command=self.ok).pack(side="left", padx=4)
-        ttk.Button(box, text="Recovery", command=self.recovery).pack(side="left", padx=4)
-        ttk.Button(box, text="Cancel", command=self.cancel).pack(side="left", padx=4)
+        box = ctk.CTkFrame(self)
+        ctk.CTkButton(box, text="Unlock", command=self.ok).pack(side="left", padx=4)
+        ctk.CTkButton(box, text="Recovery", command=self.recovery).pack(side="left", padx=4)
+        ctk.CTkButton(box, text="Cancel", command=self.cancel).pack(side="left", padx=4)
         box.pack(pady=10)
 
     def validate(self):
@@ -94,18 +97,20 @@ class RecoveryCodesWindow(tk.Toplevel):
         self.title("Recovery Codes")
         self.resizable(False, False)
         self.transient(parent)
-        ttk.Label(self, text="Store these recovery codes somewhere safe.").pack(anchor="w", padx=16, pady=(14, 8))
+        ctk.CTkLabel(self, text="Store these recovery codes somewhere safe.").pack(anchor="w", padx=16, pady=(14, 8))
         text = tk.Text(self, width=34, height=9, wrap="none")
         text.pack(padx=16)
         text.insert("1.0", "\n".join(codes))
         text.configure(state="disabled")
-        ttk.Button(self, text="I saved them", command=self.destroy).pack(pady=14)
+        ctk.CTkButton(self, text="I saved them", command=self.destroy).pack(pady=14)
         self.grab_set()
 
 
-class WindslockApp(tk.Tk):
+class WindslockApp(ctk.CTk):
     def __init__(self, password: str):
         super().__init__()
+        ctk.set_appearance_mode('System')
+        ctk.set_default_color_theme('blue')
         self.password = password
         self.title(f"{brand.APP_NAME} - {brand.APP_TAGLINE}")
         self.geometry("980x640")
@@ -113,26 +118,26 @@ class WindslockApp(tk.Tk):
         self.protocol("WM_DELETE_WINDOW", self.hide_to_background)
         self._set_window_icon()
 
-        self.status_var = tk.StringVar()
+        self.status_var = ctk.StringVar()
         self.logo_image = None
         self._build()
         self.refresh_all()
         self.after(5000, self.refresh_status)
 
     def _build(self):
-        root = ttk.Frame(self, padding=12)
+        root = ctk.CTkFrame(self)
         root.pack(fill="both", expand=True)
 
-        top = ttk.Frame(root)
+        top = ctk.CTkFrame(root)
         top.pack(fill="x", pady=(0, 10))
         if brand.logo_png().exists():
             self.logo_image = tk.PhotoImage(file=str(brand.logo_png())).subsample(4, 4)
-            ttk.Label(top, image=self.logo_image).pack(side="left", padx=(0, 12))
-        title_block = ttk.Frame(top)
+            ctk.CTkLabel(top, image=self.logo_image).pack(side="left", padx=(0, 12))
+        title_block = ctk.CTkFrame(top)
         title_block.pack(side="left")
-        ttk.Label(title_block, text=brand.APP_NAME, font=("Segoe UI", 20, "bold")).pack(anchor="w")
-        ttk.Label(title_block, text=brand.APP_TAGLINE, foreground="#334155").pack(anchor="w")
-        ttk.Label(top, textvariable=self.status_var).pack(side="right")
+        ctk.CTkLabel(title_block, text=brand.APP_NAME, font=("Segoe UI", 20, "bold")).pack(anchor="w")
+        ctk.CTkLabel(title_block, text=brand.APP_TAGLINE, text_color="#334155").pack(anchor="w")
+        ctk.CTkLabel(top, textvariable=self.status_var).pack(side="right")
 
         self.notebook = ttk.Notebook(root)
         self.notebook.pack(fill="both", expand=True)
@@ -145,8 +150,8 @@ class WindslockApp(tk.Tk):
         self._build_history()
         self._build_settings()
 
-    def _tab(self, name: str) -> ttk.Frame:
-        frame = ttk.Frame(self.notebook, padding=12)
+    def _tab(self, name: str) -> ctk.CTkFrame:
+        frame = ctk.CTkFrame(self.notebook)
         self.notebook.add(frame, text=name)
         return frame
 
@@ -161,128 +166,128 @@ class WindslockApp(tk.Tk):
         tab = self._tab("Dashboard")
         self.summary = tk.Text(tab, height=16, wrap="word")
         self.summary.pack(fill="both", expand=True)
-        actions = ttk.Frame(tab)
+        actions = ctk.CTkFrame(tab)
         actions.pack(fill="x", pady=(10, 0))
-        ttk.Button(actions, text="Start background", command=self.enable_background).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Stop background", command=self.disable_background).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Refresh", command=self.refresh_all).pack(side="left")
+        ctk.CTkButton(actions, text="Start background", command=self.enable_background).pack(side="left", padx=(0, 8))
+        ctk.CTkButton(actions, text="Stop background", command=self.disable_background).pack(side="left", padx=(0, 8))
+        ctk.CTkButton(actions, text="Refresh", command=self.refresh_all).pack(side="left")
 
     def _build_focus(self):
         tab = self._tab("Focus")
 
-        presets = ttk.LabelFrame(tab, text="One-click presets", padding=10)
+        presets = ctk.CTkFrame(tab)
         presets.pack(fill="x")
         self.preset_choice = ttk.Combobox(presets, values=tuple(focus_manager.PRESETS.keys()), state="readonly")
         self.preset_choice.set("Deep Work")
         self.preset_choice.pack(side="left", fill="x", expand=True, padx=(0, 8))
-        ttk.Button(presets, text="Apply preset", command=self.apply_preset).pack(side="left")
+        ctk.CTkButton(presets, text="Apply preset", command=self.apply_preset).pack(side="left")
 
-        session = ttk.LabelFrame(tab, text="Timed focus session", padding=10)
+        session = ctk.CTkFrame(tab)
         session.pack(fill="x", pady=(12, 0))
         self.focus_minutes = ttk.Spinbox(session, from_=1, to=480, width=8)
         self.focus_minutes.set("90")
         self.focus_minutes.pack(side="left", padx=(0, 8))
-        ttk.Button(session, text="Start session", command=self.start_focus_session).pack(side="left", padx=(0, 8))
-        ttk.Button(session, text="Stop session", command=self.stop_focus_session).pack(side="left")
+        ctk.CTkButton(session, text="Start session", command=self.start_focus_session).pack(side="left", padx=(0, 8))
+        ctk.CTkButton(session, text="Stop session", command=self.stop_focus_session).pack(side="left")
 
-        schedule_mode = ttk.LabelFrame(tab, text="Schedule-only enforcement", padding=10)
+        schedule_mode = ctk.CTkFrame(tab)
         schedule_mode.pack(fill="x", pady=(12, 0))
-        self.schedule_only_var = tk.BooleanVar()
-        ttk.Checkbutton(
+        self.schedule_only_var = ctk.BooleanVar()
+        ctk.CTkCheckBox(
             schedule_mode,
             text="Only enforce during focus sessions or schedules",
             variable=self.schedule_only_var,
             command=self.save_schedule_only_mode,
         ).pack(anchor="w")
 
-        form = ttk.LabelFrame(tab, text="Weekly schedule", padding=10)
+        form = ctk.CTkFrame(tab)
         form.pack(fill="x", pady=(12, 0))
-        self.schedule_name = ttk.Entry(form, width=18)
+        self.schedule_name = ctk.CTkEntry(form, width=180)
         self.schedule_name.insert(0, "Work")
         self.schedule_name.grid(row=0, column=0, padx=(0, 8))
-        self.schedule_start = ttk.Entry(form, width=8)
+        self.schedule_start = ctk.CTkEntry(form, width=80)
         self.schedule_start.insert(0, "09:00")
         self.schedule_start.grid(row=0, column=1, padx=(0, 8))
-        self.schedule_end = ttk.Entry(form, width=8)
+        self.schedule_end = ctk.CTkEntry(form, width=80)
         self.schedule_end.insert(0, "17:00")
         self.schedule_end.grid(row=0, column=2, padx=(0, 8))
         self.day_vars = []
         days = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-        days_frame = ttk.Frame(form)
+        days_frame = ctk.CTkFrame(form)
         days_frame.grid(row=1, column=0, columnspan=4, sticky="w", pady=(8, 0))
         for index, label in enumerate(days):
-            var = tk.BooleanVar(value=index < 5)
+            var = ctk.BooleanVar(value=index < 5)
             self.day_vars.append(var)
-            ttk.Checkbutton(days_frame, text=label, variable=var).pack(side="left", padx=(0, 6))
-        ttk.Button(form, text="Add schedule", command=self.add_schedule).grid(row=0, column=3)
+            ctk.CTkCheckBox(days_frame, text=label, variable=var).pack(side="left", padx=(0, 6))
+        ctk.CTkButton(form, text="Add schedule", command=self.add_schedule).grid(row=0, column=3)
 
         self.schedule_tree = ttk.Treeview(tab, columns=("name", "days", "start", "end"), show="headings", height=7)
         for name, width in (("name", 160), ("days", 260), ("start", 90), ("end", 90)):
             self.schedule_tree.heading(name, text=name.title())
             self.schedule_tree.column(name, width=width)
         self.schedule_tree.pack(fill="both", expand=True, pady=12)
-        ttk.Button(tab, text="Remove selected schedule", command=self.remove_schedule).pack(anchor="e")
+        ctk.CTkButton(tab, text="Remove selected schedule", command=self.remove_schedule).pack(anchor="e")
 
     def _build_apps(self):
         tab = self._tab("Apps")
-        form = ttk.Frame(tab)
+        form = ctk.CTkFrame(tab)
         form.pack(fill="x")
-        self.app_entry = ttk.Entry(form)
+        self.app_entry = ctk.CTkEntry(form)
         self.app_entry.pack(side="left", fill="x", expand=True, padx=(0, 8))
-        ttk.Button(form, text="Browse", command=self.pick_app).pack(side="left", padx=(0, 8))
-        ttk.Button(form, text="Running apps", command=self.choose_running_app).pack(side="left", padx=(0, 8))
-        ttk.Button(form, text="Add", command=self.add_app).pack(side="left")
+        ctk.CTkButton(form, text="Browse", command=self.pick_app).pack(side="left", padx=(0, 8))
+        ctk.CTkButton(form, text="Running apps", command=self.choose_running_app).pack(side="left", padx=(0, 8))
+        ctk.CTkButton(form, text="Add", command=self.add_app).pack(side="left")
 
         self.apps_tree = ttk.Treeview(tab, columns=("mode", "value"), show="headings", height=14)
         self.apps_tree.heading("mode", text="Mode")
         self.apps_tree.heading("value", text="Name or path")
         self.apps_tree.column("mode", width=90, stretch=False)
         self.apps_tree.pack(fill="both", expand=True, pady=10)
-        ttk.Button(tab, text="Remove selected", command=self.remove_app).pack(anchor="e")
+        ctk.CTkButton(tab, text="Remove selected", command=self.remove_app).pack(anchor="e")
 
     def _build_sites(self):
         tab = self._tab("Websites")
-        ttk.Label(tab, text="Whole-domain blocks use the Windows hosts file.").pack(anchor="w")
-        form = ttk.Frame(tab)
+        ctk.CTkLabel(tab, text="Whole-domain blocks use the Windows hosts file.").pack(anchor="w")
+        form = ctk.CTkFrame(tab)
         form.pack(fill="x", pady=(6, 0))
-        self.site_entry = ttk.Entry(form)
+        self.site_entry = ctk.CTkEntry(form)
         self.site_entry.pack(side="left", fill="x", expand=True, padx=(0, 8))
-        ttk.Button(form, text="Add domain", command=self.add_site).pack(side="left")
+        ctk.CTkButton(form, text="Add domain", command=self.add_site).pack(side="left")
 
         self.sites_list = tk.Listbox(tab, height=14)
         self.sites_list.pack(fill="both", expand=True, pady=10)
-        buttons = ttk.Frame(tab)
+        buttons = ctk.CTkFrame(tab)
         buttons.pack(fill="x")
-        ttk.Button(buttons, text="Remove selected", command=self.remove_site).pack(side="left")
-        ttk.Button(buttons, text="Apply hosts block", command=self.apply_hosts).pack(side="right")
-        ttk.Button(buttons, text="Rollback hosts entries", command=self.rollback_hosts).pack(side="right", padx=(0, 8))
+        ctk.CTkButton(buttons, text="Remove selected", command=self.remove_site).pack(side="left")
+        ctk.CTkButton(buttons, text="Apply hosts block", command=self.apply_hosts).pack(side="right")
+        ctk.CTkButton(buttons, text="Rollback hosts entries", command=self.rollback_hosts).pack(side="right", padx=(0, 8))
 
         ttk.Separator(tab).pack(fill="x", pady=12)
-        ttk.Label(tab, text="Path-level blocks require the local mitmproxy addon.").pack(anchor="w")
-        path_form = ttk.Frame(tab)
+        ctk.CTkLabel(tab, text="Path-level blocks require the local mitmproxy addon.").pack(anchor="w")
+        path_form = ctk.CTkFrame(tab)
         path_form.pack(fill="x", pady=(6, 0))
-        self.path_domain_entry = ttk.Entry(path_form, width=28)
+        self.path_domain_entry = ctk.CTkEntry(path_form, width=280)
         self.path_domain_entry.pack(side="left", padx=(0, 8))
         self.path_domain_entry.insert(0, "youtube.com")
-        self.path_prefix_entry = ttk.Entry(path_form, width=24)
+        self.path_prefix_entry = ctk.CTkEntry(path_form, width=240)
         self.path_prefix_entry.pack(side="left", padx=(0, 8))
         self.path_prefix_entry.insert(0, "/shorts")
-        ttk.Button(path_form, text="Add path rule", command=self.add_path_rule).pack(side="left")
+        ctk.CTkButton(path_form, text="Add path rule", command=self.add_path_rule).pack(side="left")
 
         self.path_tree = ttk.Treeview(tab, columns=("domain", "path"), show="headings", height=6)
         self.path_tree.heading("domain", text="Domain")
         self.path_tree.heading("path", text="Blocked path")
         self.path_tree.pack(fill="both", expand=True, pady=10)
-        path_buttons = ttk.Frame(tab)
+        path_buttons = ctk.CTkFrame(tab)
         path_buttons.pack(fill="x")
-        ttk.Button(path_buttons, text="Remove selected path", command=self.remove_path_rule).pack(side="left")
+        ctk.CTkButton(path_buttons, text="Remove selected path", command=self.remove_path_rule).pack(side="left")
 
     def _build_folders(self):
         tab = self._tab("Folders")
-        buttons = ttk.Frame(tab)
+        buttons = ctk.CTkFrame(tab)
         buttons.pack(fill="x", pady=(0, 10))
-        ttk.Button(buttons, text="Lock folder", command=self.lock_folder).pack(side="left", padx=(0, 8))
-        ttk.Button(buttons, text="Unlock .locked file", command=self.unlock_folder).pack(side="left")
+        ctk.CTkButton(buttons, text="Lock folder", command=self.lock_folder).pack(side="left", padx=(0, 8))
+        ctk.CTkButton(buttons, text="Unlock .locked file", command=self.unlock_folder).pack(side="left")
         self.folders_tree = ttk.Treeview(tab, columns=("original", "locked"), show="headings", height=14)
         self.folders_tree.heading("original", text="Original folder")
         self.folders_tree.heading("locked", text="Locked file")
@@ -290,30 +295,30 @@ class WindslockApp(tk.Tk):
 
     def _build_overrides(self):
         tab = self._tab("Overrides")
-        settings = ttk.LabelFrame(tab, text="Friction phrase and timers", padding=10)
+        settings = ctk.CTkFrame(tab)
         settings.pack(fill="x")
-        ttk.Label(settings, text="Exact phrase").grid(row=0, column=0, sticky="w")
-        self.override_phrase = ttk.Entry(settings)
+        ctk.CTkLabel(settings).grid(row=0, column=0, sticky="w")
+        self.override_phrase = ctk.CTkEntry(settings)
         self.override_phrase.grid(row=0, column=1, sticky="ew", padx=(8, 0), pady=3)
-        ttk.Label(settings, text="Cooldown minutes").grid(row=1, column=0, sticky="w")
+        ctk.CTkLabel(settings, text="Cooldown minutes").grid(row=1, column=0, sticky="w")
         self.override_cooldown = ttk.Spinbox(settings, from_=0, to=240, width=8)
         self.override_cooldown.grid(row=1, column=1, sticky="w", padx=(8, 0), pady=3)
-        ttk.Label(settings, text="Unlock window minutes").grid(row=2, column=0, sticky="w")
+        ctk.CTkLabel(settings, text="Unlock window minutes").grid(row=2, column=0, sticky="w")
         self.override_window = ttk.Spinbox(settings, from_=1, to=240, width=8)
         self.override_window.grid(row=2, column=1, sticky="w", padx=(8, 0), pady=3)
         settings.columnconfigure(1, weight=1)
-        ttk.Button(settings, text="Save override settings", command=self.save_override_settings).grid(row=3, column=1, sticky="e", pady=(8, 0))
+        ctk.CTkButton(settings, text="Save override settings", command=self.save_override_settings).grid(row=3, column=1, sticky="e", pady=(8, 0))
 
-        request = ttk.LabelFrame(tab, text="Request temporary override", padding=10)
+        request = ctk.CTkFrame(tab)
         request.pack(fill="x", pady=(12, 0))
         self.override_type = ttk.Combobox(request, values=("app", "site", "url_path", "folder"), state="readonly", width=12)
         self.override_type.set("app")
         self.override_type.grid(row=0, column=0, padx=(0, 8))
-        self.override_target = ttk.Entry(request)
+        self.override_target = ctk.CTkEntry(request)
         self.override_target.grid(row=0, column=1, sticky="ew", padx=(0, 8))
-        self.override_phrase_attempt = ttk.Entry(request)
+        self.override_phrase_attempt = ctk.CTkEntry(request)
         self.override_phrase_attempt.grid(row=0, column=2, sticky="ew", padx=(0, 8))
-        ttk.Button(request, text="Request", command=self.request_override).grid(row=0, column=3)
+        ctk.CTkButton(request, text="Request", command=self.request_override).grid(row=0, column=3)
         request.columnconfigure(1, weight=1)
         request.columnconfigure(2, weight=1)
 
@@ -322,7 +327,7 @@ class WindslockApp(tk.Tk):
             self.override_tree.heading(name, text=name.title())
             self.override_tree.column(name, width=width)
         self.override_tree.pack(fill="both", expand=True, pady=12)
-        ttk.Button(tab, text="Refresh", command=self.refresh_overrides).pack(anchor="e")
+        ctk.CTkButton(tab, text="Refresh", command=self.refresh_overrides).pack(anchor="e")
 
     def _build_history(self):
         tab = self._tab("History")
@@ -331,18 +336,18 @@ class WindslockApp(tk.Tk):
             self.history_tree.heading(name, text=name.title())
             self.history_tree.column(name, width=width)
         self.history_tree.pack(fill="both", expand=True)
-        ttk.Button(tab, text="Refresh", command=self.refresh_history).pack(anchor="e", pady=(10, 0))
+        ctk.CTkButton(tab, text="Refresh", command=self.refresh_history).pack(anchor="e", pady=(10, 0))
 
     def _build_settings(self):
         tab = self._tab("Settings")
-        ttk.Button(tab, text="Enable start with Windows", command=self.enable_startup).pack(anchor="w", pady=4)
-        ttk.Button(tab, text="Disable start with Windows", command=self.disable_startup).pack(anchor="w", pady=4)
-        ttk.Button(tab, text="Install pro startup task", command=self.install_startup_task).pack(anchor="w", pady=4)
-        ttk.Button(tab, text="Remove pro startup task", command=self.remove_startup_task).pack(anchor="w", pady=4)
-        ttk.Button(tab, text="Harden config folder ACL", command=self.harden_acl).pack(anchor="w", pady=4)
-        ttk.Button(tab, text="Change master password", command=self.change_password).pack(anchor="w", pady=4)
-        ttk.Button(tab, text="Show app data folder", command=self.show_appdata).pack(anchor="w", pady=4)
-        ttk.Button(tab, text="Exit app", command=self.destroy).pack(anchor="w", pady=(18, 4))
+        ctk.CTkButton(tab, text="Enable start with Windows", command=self.enable_startup).pack(anchor="w", pady=4)
+        ctk.CTkButton(tab, text="Disable start with Windows", command=self.disable_startup).pack(anchor="w", pady=4)
+        ctk.CTkButton(tab, text="Install pro startup task", command=self.install_startup_task).pack(anchor="w", pady=4)
+        ctk.CTkButton(tab, text="Remove pro startup task", command=self.remove_startup_task).pack(anchor="w", pady=4)
+        ctk.CTkButton(tab, text="Harden config folder ACL", command=self.harden_acl).pack(anchor="w", pady=4)
+        ctk.CTkButton(tab, text="Change master password", command=self.change_password).pack(anchor="w", pady=4)
+        ctk.CTkButton(tab, text="Show app data folder", command=self.show_appdata).pack(anchor="w", pady=4)
+        ctk.CTkButton(tab, text="Exit app", command=self.destroy).pack(anchor="w", pady=(18, 4))
 
     def refresh_all(self):
         self.refresh_status()
@@ -462,7 +467,7 @@ class WindslockApp(tk.Tk):
             )
 
     def _load(self):
-        return cfg.load_config(self.password)
+        return EncryptedDatabase(self.password)._data
 
     def _run(self, title: str, fn, refresh=True):
         try:
@@ -501,7 +506,7 @@ class WindslockApp(tk.Tk):
                 self.app_entry.insert(0, listbox.get(selection[0]))
                 picker.destroy()
 
-        ttk.Button(picker, text="Use selected", command=use_selected).pack(pady=(0, 10))
+        ctk.CTkButton(picker, text="Use selected", command=use_selected).pack(pady=(0, 10))
 
     def add_app(self):
         value = self.app_entry.get().strip()
@@ -679,7 +684,7 @@ class WindslockApp(tk.Tk):
 
 
 def open_app() -> None:
-    root = tk.Tk()
+    root = ctk.CTk()
     root.withdraw()
     if not cfg.master_password_is_set():
         dialog = SetupDialog(root)
