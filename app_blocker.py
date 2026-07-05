@@ -69,6 +69,28 @@ def list_running_processes() -> list[str]:
     return sorted(names)
 
 
+def list_running_process_details() -> list[dict[str, str]]:
+    ps = require_psutil()
+    processes: list[dict[str, str]] = []
+    for proc in ps.process_iter(["pid", "name", "exe"]):
+        try:
+            name = proc.info.get("name") or proc.name() or ""
+            if not name:
+                continue
+            exe = proc.info.get("exe") or ""
+            processes.append({"pid": str(proc.info.get("pid") or proc.pid), "name": name, "exe": exe})
+        except (ps.NoSuchProcess, ps.AccessDenied, ps.ZombieProcess):
+            continue
+    return sorted(processes, key=lambda item: (item["name"].lower(), item["pid"]))
+
+
+def _name_matches(rule_value: str, process_name: str) -> bool:
+    if process_name == rule_value:
+        return True
+    proc_base, _ = os.path.splitext(process_name)
+    return "." not in rule_value and proc_base == rule_value
+
+
 def _process_matches(proc: Any, rules: list[dict[str, str]], config: dict | None = None) -> tuple[bool, str]:
     ps = require_psutil()
     try:
@@ -84,7 +106,7 @@ def _process_matches(proc: Any, rules: list[dict[str, str]], config: dict | None
         return False, ""
 
     for rule in rules:
-        if rule["mode"] == "name" and name == rule["value"]:
+        if rule["mode"] == "name" and _name_matches(rule["value"], name):
             if config and override_manager.is_overridden(config, "app", rule["value"]):
                 return False, ""
             return True, name
@@ -93,6 +115,28 @@ def _process_matches(proc: Any, rules: list[dict[str, str]], config: dict | None
                 return False, ""
             return True, exe_norm
     return False, ""
+
+
+def find_matching_processes(rules: list[dict[str, str]], config: dict | None = None) -> list[dict[str, str]]:
+    """Return running processes that match app rules without killing them."""
+    ps = require_psutil()
+    matches: list[dict[str, str]] = []
+    for proc in ps.process_iter(["pid", "name", "exe"]):
+        matched, target = _process_matches(proc, rules, config)
+        if not matched:
+            continue
+        try:
+            matches.append(
+                {
+                    "pid": str(proc.info.get("pid") or proc.pid),
+                    "name": proc.info.get("name") or proc.name() or "",
+                    "exe": proc.info.get("exe") or "",
+                    "target": target,
+                }
+            )
+        except (ps.NoSuchProcess, ps.AccessDenied, ps.ZombieProcess):
+            continue
+    return matches
 
 
 def _kill(proc: Any) -> bool:
