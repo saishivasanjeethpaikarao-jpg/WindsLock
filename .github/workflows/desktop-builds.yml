@@ -65,6 +65,20 @@ jobs:
           Compress-Archive -Path dist\Windslock\* -DestinationPath Windslock-Windows.zip
           Compress-Archive -Path dist-onefile\*.exe, README.md, docs, assets -DestinationPath Windslock-Windows-OneFile.zip
 
+      - name: Build Windows installer
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          New-Item -ItemType Directory -Force dist\installer | Out-Null
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (!(Test-Path $iscc)) {
+            $iscc = "${env:ProgramFiles}\Inno Setup 6\ISCC.exe"
+          }
+          if (!(Test-Path $iscc)) {
+            throw "Inno Setup compiler was not found."
+          }
+          & $iscc packaging\windows\Windslock.iss
+
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
@@ -72,6 +86,7 @@ jobs:
           path: |
             Windslock-Windows.zip
             Windslock-Windows-OneFile.zip
+            dist/installer/Windslock-Setup.exe
 
   linux:
     name: Build Linux desktop app
@@ -99,14 +114,19 @@ jobs:
       - name: Generate brand assets
         run: python generate_brand_assets.py
 
-      - name: Build Linux bundle
+      - name: Build Linux bundle and Debian package
         run: bash scripts/build_linux_app.sh
+
+      - name: Build Debian package
+        run: bash scripts/build_linux_deb.sh
 
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
         with:
           name: Windslock-Linux
-          path: dist/Windslock-Linux.tar.gz
+          path: |
+            dist/Windslock-Linux.tar.gz
+            dist/Windslock-Linux-Debian.deb
 
   attach-release-artifacts:
     name: Attach artifacts to release
@@ -128,4 +148,6 @@ jobs:
           files: |
             artifacts/Windslock-Windows/Windslock-Windows.zip
             artifacts/Windslock-Windows/Windslock-Windows-OneFile.zip
+            artifacts/Windslock-Windows/Windslock-Setup.exe
             artifacts/Windslock-Linux/Windslock-Linux.tar.gz
+            artifacts/Windslock-Linux/Windslock-Linux-Debian.deb
