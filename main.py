@@ -9,6 +9,7 @@ import sys
 import app_blocker
 import audit_log
 import config as cfg
+from database import EncryptedDatabase
 import folder_locker
 import site_blocker
 import startup
@@ -73,7 +74,7 @@ def start_background_now() -> None:
 
 
 def print_rules(password: str) -> None:
-    config = cfg.load_config(password)
+    config = EncryptedDatabase(password)._data
     print("\nLocked apps:")
     for rule in config["locked_apps"] or []:
         print(f"  {rule['mode']}: {rule['value']}")

@@ -13,6 +13,7 @@ from mitmproxy import http
 
 import audit_log
 import config as cfg
+from database import EncryptedDatabase
 import focus_manager
 import override_manager
 import url_rule_engine
@@ -39,7 +40,7 @@ class WindslockProxyAddon:
         if not focus_manager.should_enforce(config):
             if changed:
                 try:
-                    cfg.save_config_for_background(config)
+                    EncryptedDatabase(is_background=True).save_dict(config)
                 except Exception:
                     pass
             return
@@ -57,7 +58,7 @@ class WindslockProxyAddon:
 
         if changed:
             try:
-                cfg.save_config_for_background(config)
+                EncryptedDatabase(is_background=True).save_dict(config)
             except Exception:
                 pass
 

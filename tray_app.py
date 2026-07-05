@@ -11,6 +11,7 @@ import pystray
 
 import brand
 import config as cfg
+from database import EncryptedDatabase
 import runtime_control
 
 

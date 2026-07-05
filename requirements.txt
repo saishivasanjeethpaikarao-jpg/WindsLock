@@ -4,3 +4,6 @@ mitmproxy>=11.0.0
 Pillow>=10.0.0
 pystray>=0.19.5
 pyinstaller>=6.0.0
+keyring
+keyrings.alt
+customtkinter>=5.2.2

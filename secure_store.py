@@ -40,38 +40,53 @@ def _bytes_from_blob(blob: DATA_BLOB) -> bytes:
 
 
 def protect(data: bytes, description: str = "Windslock local secret") -> bytes:
-    """Protect bytes for the current Windows user using DPAPI."""
-    _require_windows()
-    in_blob, _buffer = _blob_from_bytes(data)
-    out_blob = DATA_BLOB()
-    ok = ctypes.windll.crypt32.CryptProtectData(
-        ctypes.byref(in_blob),
-        description,
-        None,
-        None,
-        None,
-        0,
-        ctypes.byref(out_blob),
-    )
-    if not ok:
-        raise ctypes.WinError()
-    return _bytes_from_blob(out_blob)
+    """Protect bytes for the current user."""
+    if os.name == "nt":
+        in_blob, _buffer = _blob_from_bytes(data)
+        out_blob = DATA_BLOB()
+        ok = ctypes.windll.crypt32.CryptProtectData(
+            ctypes.byref(in_blob),
+            description,
+            None,
+            None,
+            None,
+            0,
+            ctypes.byref(out_blob),
+        )
+        if not ok:
+            raise ctypes.WinError()
+        return _bytes_from_blob(out_blob)
+    else:
+        # Fallback to python keyring for Linux
+        import keyring
+        import base64
+        b64_data = base64.b64encode(data).decode('utf-8')
+        keyring.set_password("windslock", "service_key", b64_data)
+        return b"keyring_managed"
 
 
 def unprotect(data: bytes) -> bytes:
-    """Unprotect bytes that were protected for the current Windows user."""
-    _require_windows()
-    in_blob, _buffer = _blob_from_bytes(data)
-    out_blob = DATA_BLOB()
-    ok = ctypes.windll.crypt32.CryptUnprotectData(
-        ctypes.byref(in_blob),
-        None,
-        None,
-        None,
-        None,
-        0,
-        ctypes.byref(out_blob),
-    )
-    if not ok:
-        raise ctypes.WinError()
-    return _bytes_from_blob(out_blob)
+    """Unprotect bytes that were protected for the current user."""
+    if os.name == "nt":
+        in_blob, _buffer = _blob_from_bytes(data)
+        out_blob = DATA_BLOB()
+        ok = ctypes.windll.crypt32.CryptUnprotectData(
+            ctypes.byref(in_blob),
+            None,
+            None,
+            None,
+            None,
+            0,
+            ctypes.byref(out_blob),
+        )
+        if not ok:
+            raise ctypes.WinError()
+        return _bytes_from_blob(out_blob)
+    else:
+        # Fallback to python keyring for Linux
+        import keyring
+        import base64
+        b64_data = keyring.get_password("windslock", "service_key")
+        if not b64_data:
+            raise RuntimeError("Keyring secret not found")
+        return base64.b64decode(b64_data)

@@ -1,3 +1,4 @@
+from database import EncryptedDatabase
 import os
 import tempfile
 import unittest
@@ -7,6 +8,8 @@ import config
 
 class ConfigTests(unittest.TestCase):
     def setUp(self):
+        from database import EncryptedDatabase
+        EncryptedDatabase.reset_cache()
         self.tempdir = tempfile.TemporaryDirectory()
         os.environ[config.ENV_APP_DIR] = self.tempdir.name
         self.old_iterations = config.ITERATIONS
@@ -23,11 +26,11 @@ class ConfigTests(unittest.TestCase):
         self.assertTrue(config.verify_password("correct horse"))
         self.assertFalse(config.verify_password("wrong horse"))
 
-        data = config.load_config("correct horse")
+        data = EncryptedDatabase("correct horse")._data
         data["blocked_sites"].append("example.com")
-        config.save_config(data, "correct horse")
+        EncryptedDatabase("correct horse").save_dict(data)
 
-        loaded = config.load_config("correct horse")
+        loaded = EncryptedDatabase("correct horse")._data
         self.assertIn("example.com", loaded["blocked_sites"])
         raw = config.get_config_path().read_bytes()
         self.assertNotIn(b"example.com", raw)

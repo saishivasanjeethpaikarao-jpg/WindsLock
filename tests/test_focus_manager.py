@@ -1,3 +1,4 @@
+from database import EncryptedDatabase
 from datetime import datetime, timedelta
 import os
 import tempfile
@@ -9,6 +10,8 @@ import focus_manager
 
 class FocusManagerTests(unittest.TestCase):
     def setUp(self):
+        from database import EncryptedDatabase
+        EncryptedDatabase.reset_cache()
         self.tempdir = tempfile.TemporaryDirectory()
         os.environ[config.ENV_APP_DIR] = self.tempdir.name
         self.old_iterations = config.ITERATIONS
@@ -22,7 +25,7 @@ class FocusManagerTests(unittest.TestCase):
 
     def test_preset_adds_apps_sites_and_path_rules(self):
         focus_manager.apply_preset("test password", "Deep Work")
-        data = config.load_config("test password")
+        data = EncryptedDatabase("test password")._data
 
         self.assertTrue(any(rule["value"] == "steam.exe" for rule in data["locked_apps"]))
         self.assertIn("reddit.com", data["blocked_sites"])
@@ -30,17 +33,17 @@ class FocusManagerTests(unittest.TestCase):
 
     def test_focus_session_counts_as_active_in_schedule_only_mode(self):
         focus_manager.set_schedule_only_mode("test password", True)
-        data = config.load_config("test password")
+        data = EncryptedDatabase("test password")._data
         self.assertFalse(focus_manager.should_enforce(data))
 
         focus_manager.start_focus_session("test password", 30)
-        data = config.load_config("test password")
+        data = EncryptedDatabase("test password")._data
         self.assertTrue(focus_manager.should_enforce(data))
 
     def test_weekly_schedule_controls_enforcement(self):
         focus_manager.set_schedule_only_mode("test password", True)
         focus_manager.add_schedule("test password", "Study", [0], "09:00", "10:00")
-        data = config.load_config("test password")
+        data = EncryptedDatabase("test password")._data
 
         monday_inside = datetime(2026, 7, 6, 9, 30)
         monday_outside = datetime(2026, 7, 6, 11, 0)

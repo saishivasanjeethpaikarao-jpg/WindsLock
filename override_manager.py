@@ -8,6 +8,7 @@ from typing import Any
 
 import audit_log
 import config as cfg
+from database import EncryptedDatabase
 
 
 STATUS_DENIED = "denied"
@@ -69,7 +70,7 @@ def process_overrides(config: dict[str, Any], now: datetime | None = None) -> bo
 
 
 def request_override(password: str, target_type: str, target: str, phrase: str) -> dict[str, Any]:
-    config = cfg.load_config(password)
+    config = EncryptedDatabase(password)._data
     changed = process_overrides(config)
     now = utc_now()
     expected = config["settings"].get("override_phrase", "")
@@ -85,7 +86,7 @@ def request_override(password: str, target_type: str, target: str, phrase: str) 
         }
         config["override_requests"].append(request)
         audit_log.add_event(config, "override", target, "denied", f"type={target_type} reason=phrase_mismatch")
-        cfg.save_config(config, password)
+        EncryptedDatabase(password).save_dict(config)
         return request
 
     cooldown = int(config["settings"].get("override_cooldown_minutes", 5))
@@ -102,7 +103,7 @@ def request_override(password: str, target_type: str, target: str, phrase: str) 
     audit_log.add_event(config, "override", target, "cooldown_started", f"type={target_type} ready_at={request['ready_at']}")
     if changed:
         audit_log.add_event(config, "override", "system", "processed", "processed pending override state")
-    cfg.save_config(config, password)
+    EncryptedDatabase(password).save_dict(config)
     return request
 
 
@@ -116,10 +117,10 @@ def is_overridden(config: dict[str, Any], target_type: str, target: str, now: da
 
 
 def list_overrides(password: str) -> list[dict[str, Any]]:
-    config = cfg.load_config(password)
+    config = EncryptedDatabase(password)._data
     changed = process_overrides(config)
     if changed:
-        cfg.save_config(config, password)
+        EncryptedDatabase(password).save_dict(config)
     return list(config.get("override_requests", []))
 
 
@@ -128,9 +129,9 @@ def update_settings(password: str, phrase: str, cooldown_minutes: int, window_mi
         raise ValueError("Override phrase cannot be empty.")
     if cooldown_minutes < 0 or window_minutes < 1:
         raise ValueError("Cooldown must be 0+ minutes and window must be at least 1 minute.")
-    config = cfg.load_config(password)
+    config = EncryptedDatabase(password)._data
     config["settings"]["override_phrase"] = phrase
     config["settings"]["override_cooldown_minutes"] = cooldown_minutes
     config["settings"]["override_window_minutes"] = window_minutes
     audit_log.add_event(config, "override", "settings", "updated", "override phrase/timers changed")
-    cfg.save_config(config, password)
+    EncryptedDatabase(password).save_dict(config)
