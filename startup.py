@@ -16,18 +16,48 @@ APP_VALUE = "WindslockEnforcer"
 TASK_NAME = "WindslockEnforcer"
 
 
+def _packaged_executable(app_name: str) -> Path | None:
+    exe = Path(sys.executable)
+    names = [f"{app_name}.exe", app_name]
+    candidates: list[Path] = []
+    for name in names:
+        candidates.append(exe.with_name(name))
+        candidates.append(exe.parent / app_name / name)
+        candidates.append(exe.parent.parent / app_name / name)
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def _pythonw_executable() -> Path:
+    exe = Path(sys.executable)
+    pythonw = exe.with_name("pythonw.exe")
+    return pythonw if pythonw.exists() else exe
+
+
+def _script_command(script_name: str) -> str:
+    exe = _pythonw_executable()
+    script = Path(__file__).with_name(script_name)
+    return f'"{exe}" "{script}"'
+
+
 def _command() -> str:
-    pythonw = Path(sys.executable).with_name("pythonw.exe")
-    exe = pythonw if pythonw.exists() else Path(sys.executable)
-    service = Path(__file__).with_name("enforcer.py")
-    return f'"{exe}" "{service}"'
+    packaged = _packaged_executable("WindslockEnforcer")
+    if packaged:
+        return f'"{packaged}"'
+    if getattr(sys, "frozen", False):
+        raise RuntimeError("WindslockEnforcer.exe was not found next to the installed app.")
+    return _script_command("enforcer.py")
 
 
 def _tray_command() -> str:
-    pythonw = Path(sys.executable).with_name("pythonw.exe")
-    exe = pythonw if pythonw.exists() else Path(sys.executable)
-    tray = Path(__file__).with_name("tray_app.py")
-    return f'"{exe}" "{tray}"'
+    packaged = _packaged_executable("WindslockTray")
+    if packaged:
+        return f'"{packaged}"'
+    if getattr(sys, "frozen", False):
+        raise RuntimeError("WindslockTray.exe was not found next to the installed app.")
+    return _script_command("tray_app.py")
 
 
 def enable_startup(password: str) -> None:
@@ -39,6 +69,7 @@ def enable_startup(password: str) -> None:
         winreg.SetValueEx(key, APP_VALUE, 0, winreg.REG_SZ, _command())
     config = EncryptedDatabase(password)._data
     config["settings"]["run_on_startup"] = True
+    config["settings"]["startup_task"] = "run_key"
     EncryptedDatabase(password).save_dict(config)
 
 
@@ -54,14 +85,16 @@ def disable_startup(password: str) -> None:
             pass
     config = EncryptedDatabase(password)._data
     config["settings"]["run_on_startup"] = False
+    if config["settings"].get("startup_task") == "run_key":
+        config["settings"]["startup_task"] = ""
     EncryptedDatabase(password).save_dict(config)
 
 
-def install_scheduled_task(password: str, launch_tray: bool = True) -> None:
+def install_scheduled_task(password: str, launch_tray: bool = True) -> str:
     """Create an at-logon scheduled task for the current user.
 
-    This is stronger than the Run key and can be created with highest privileges
-    when the caller is elevated.
+    If Windows denies highest-privilege task creation, fall back to the normal
+    current-user Run key so startup still works without admin rights.
     """
     if os.name != "nt":
         raise RuntimeError("Scheduled tasks are only supported on Windows.")
@@ -85,11 +118,19 @@ def install_scheduled_task(password: str, launch_tray: bool = True) -> None:
         check=False,
     )
     if result.returncode != 0:
-        raise RuntimeError(result.stderr.strip() or result.stdout.strip() or "schtasks create failed")
+        detail = result.stderr.strip() or result.stdout.strip() or "schtasks create failed"
+        if "access is denied" in detail.lower():
+            enable_startup(password)
+            config = EncryptedDatabase(password)._data
+            config["settings"]["startup_task"] = "run_key_fallback"
+            EncryptedDatabase(password).save_dict(config)
+            return "Windows denied the pro startup task, so standard startup was enabled instead. Run Windslock as administrator to install the pro task."
+        raise RuntimeError(detail)
     config = EncryptedDatabase(password)._data
     config["settings"]["run_on_startup"] = True
     config["settings"]["startup_task"] = TASK_NAME
     EncryptedDatabase(password).save_dict(config)
+    return "Pro startup task installed."
 
 
 def uninstall_scheduled_task(password: str | None = None) -> None:
@@ -101,9 +142,15 @@ def uninstall_scheduled_task(password: str | None = None) -> None:
         text=True,
         check=False,
     )
-    if result.returncode != 0 and "cannot find" not in (result.stderr + result.stdout).lower():
-        raise RuntimeError(result.stderr.strip() or result.stdout.strip() or "schtasks delete failed")
+    detail = (result.stderr + result.stdout).lower()
+    if result.returncode != 0 and "cannot find" not in detail and "does not exist" not in detail:
+        if "access is denied" not in detail:
+            raise RuntimeError(result.stderr.strip() or result.stdout.strip() or "schtasks delete failed")
     if password:
+        try:
+            disable_startup(password)
+        except Exception:
+            pass
         config = EncryptedDatabase(password)._data
         config["settings"]["run_on_startup"] = False
         config["settings"]["startup_task"] = ""
