@@ -1,0 +1,148 @@
+# Build And Release Guide
+
+Windslock can be built locally on Windows and automatically on GitHub Actions
+for Windows and Linux.
+
+## GitHub Actions
+
+Workflows:
+
+- `.github/workflows/ci.yml`
+- `.github/workflows/desktop-builds.yml`
+
+Artifacts:
+
+- `Windslock-Windows.zip`
+- `Windslock-Linux.tar.gz`
+
+Triggers:
+
+- Push to `main`
+- Manual workflow dispatch
+- Published GitHub release
+
+On a published release, the workflow uploads both desktop artifacts to the
+release assets.
+
+## Windows Local Build
+
+From `D:\Windslock\files`:
+
+```powershell
+.\build_portable_exe.bat
+```
+
+Outputs:
+
+```text
+dist\Windslock\Windslock.exe
+dist\WindslockTray\WindslockTray.exe
+dist\WindslockProxy\WindslockProxy.exe
+```
+
+Recommended package shape:
+
+```text
+Windslock-Windows.zip
+  Windslock.exe
+  WindslockTray\
+  WindslockProxy\
+  assets\
+  docs\
+  run_windslock.bat
+  run_tray.bat
+  run_proxy.bat
+  install_startup_task.bat
+  uninstall_startup_task.bat
+  open_proxy_cert_help.bat
+  README.md
+```
+
+## Linux Build
+
+Linux builds run in GitHub Actions on Ubuntu. The build script is:
+
+```bash
+bash scripts/build_linux_app.sh
+```
+
+Output:
+
+```text
+dist/Windslock-Linux.tar.gz
+```
+
+Package shape:
+
+```text
+Windslock-Linux/
+  Windslock/
+  WindslockTray/
+  WindslockProxy/
+  assets/
+  docs/
+  packaging/linux/
+  run_windslock.sh
+  run_tray.sh
+  run_proxy.sh
+  README.md
+```
+
+Install for current Linux user:
+
+```bash
+tar -xzf Windslock-Linux.tar.gz
+cd Windslock-Linux
+bash packaging/linux/install_linux_user.sh
+```
+
+Uninstall:
+
+```bash
+bash packaging/linux/uninstall_linux_user.sh
+```
+
+## Runtime Notes
+
+Windows:
+
+- `Windslock.exe` opens the GUI.
+- `WindslockTray.exe` starts the tray controller.
+- `WindslockProxy.exe` starts mitmproxy for path-level URL blocking.
+- `install_startup_task.bat` installs tray startup through Task Scheduler.
+
+Linux:
+
+- `run_windslock.sh` opens the GUI.
+- `run_tray.sh` starts the tray controller.
+- `run_proxy.sh` starts path-level proxy blocking.
+- `install_linux_user.sh` installs launchers and desktop entries for the current user.
+
+## Signing
+
+Current builds are unsigned.
+
+Future release hardening:
+
+- Windows Authenticode signing
+- Checksums for release artifacts
+- SBOM generation
+- Signed GitHub releases
+
+## Verification
+
+Before releasing:
+
+```powershell
+D:\Windslock\files\.venv\Scripts\python.exe -B -m unittest discover -s tests -v
+D:\Windslock\files\.venv\Scripts\python.exe -B -c "import gui, tray_app, proxy_runner; print('imports ok')"
+```
+
+Manual checks:
+
+- GUI launches.
+- Tray launches.
+- Windows EXE opens without console.
+- Proxy starts and opens mitmproxy web UI.
+- Hosts rollback works.
+- Folder lock/unlock works on disposable folder.

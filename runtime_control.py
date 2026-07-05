@@ -62,13 +62,32 @@ def open_gui() -> None:
 
 
 def start_proxy() -> None:
+    packaged_proxy = _packaged_proxy_executable()
+    if packaged_proxy:
+        subprocess.Popen([str(packaged_proxy)], close_fds=True)
+        return
     mitmweb = Path(sys.executable).with_name("mitmweb.exe")
     if not mitmweb.exists():
-        raise RuntimeError("mitmweb.exe was not found. Install requirements first.")
+        mitmweb = Path(sys.executable).with_name("mitmweb")
+    if not mitmweb.exists():
+        raise RuntimeError("mitmweb was not found. Install requirements first.")
     subprocess.Popen(
         [str(mitmweb), "--listen-host", "127.0.0.1", "--listen-port", "8080", "-s", str(proxy_script())],
         close_fds=True,
     )
+
+
+def _packaged_proxy_executable() -> Path | None:
+    exe = Path(sys.executable)
+    names = ["WindslockProxy.exe", "WindslockProxy"]
+    candidates = []
+    for name in names:
+        candidates.append(exe.with_name(name))
+        candidates.append(exe.parent.parent / "WindslockProxy" / name)
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return None
 
 
 def stop_enforcer() -> bool:

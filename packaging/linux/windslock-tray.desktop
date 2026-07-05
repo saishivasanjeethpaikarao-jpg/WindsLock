@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Windslock Tray
+GenericName=Focus Security Tray
+Comment=Tray controller for Windslock
+Exec=windslock-tray
+Icon=windslock
+Terminal=false
+Categories=Utility;Security;
+StartupNotify=false
