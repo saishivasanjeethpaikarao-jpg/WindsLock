@@ -119,10 +119,11 @@ class WindslockApp(ctk.CTk):
         self._set_window_icon()
 
         self.status_var = ctk.StringVar()
+        self.app_lock_status_var = ctk.StringVar()
+        self._status_after_id = None
         self.logo_image = None
         self._build()
         self.refresh_all()
-        self.after(5000, self.refresh_status)
 
     def _build(self):
         root = ctk.CTkFrame(self)
@@ -230,6 +231,11 @@ class WindslockApp(ctk.CTk):
 
     def _build_apps(self):
         tab = self._tab("Apps")
+        status = ctk.CTkFrame(tab, border_width=1)
+        status.pack(fill="x", pady=(0, 10), padx=4)
+        ctk.CTkLabel(status, textvariable=self.app_lock_status_var, anchor="w").pack(side="left", fill="x", expand=True, padx=12, pady=10)
+        ctk.CTkButton(status, text="Start lock engine", command=self.enable_background).pack(side="right", padx=12, pady=10)
+
         form = ctk.CTkFrame(tab)
         form.pack(fill="x")
         self.app_entry = ctk.CTkEntry(form)
@@ -243,7 +249,10 @@ class WindslockApp(ctk.CTk):
         self.apps_tree.heading("value", text="Name or path")
         self.apps_tree.column("mode", width=90, stretch=False)
         self.apps_tree.pack(fill="both", expand=True, pady=10)
-        ctk.CTkButton(tab, text="Remove selected", command=self.remove_app).pack(anchor="e")
+        app_buttons = ctk.CTkFrame(tab)
+        app_buttons.pack(fill="x")
+        ctk.CTkButton(app_buttons, text="Test selected", command=self.test_selected_app_rule).pack(side="left")
+        ctk.CTkButton(app_buttons, text="Remove selected", command=self.remove_app).pack(side="right")
 
     def _build_sites(self):
         tab = self._tab("Websites")
@@ -350,7 +359,7 @@ class WindslockApp(ctk.CTk):
         ctk.CTkButton(tab, text="Exit app", command=self.destroy).pack(anchor="w", pady=(18, 4))
 
     def refresh_all(self):
-        self.refresh_status()
+        self.refresh_status(schedule=False)
         self.refresh_focus()
         self.refresh_apps()
         self.refresh_sites()
@@ -358,16 +367,42 @@ class WindslockApp(ctk.CTk):
         self.refresh_overrides()
         self.refresh_history()
         self.refresh_summary()
+        self._schedule_status_refresh()
 
-    def refresh_status(self):
+    def refresh_status(self, schedule=True):
         running = runtime_control.is_enforcer_running()
         config = self._load()
+        enforce_now = focus_manager.should_enforce(config)
         self.status_var.set(
             f"Background: {'running' if running else 'stopped'} | "
             f"Startup: {'on' if config['settings'].get('run_on_startup') else 'off'} | "
             f"Hosts: {'applied' if config['settings'].get('website_hosts_applied') else 'not applied'}"
         )
-        self.after(5000, self.refresh_status)
+        self._refresh_app_lock_status(config, running, enforce_now)
+        if schedule:
+            self._schedule_status_refresh()
+
+    def _schedule_status_refresh(self):
+        if self._status_after_id:
+            try:
+                self.after_cancel(self._status_after_id)
+            except tk.TclError:
+                pass
+        self._status_after_id = self.after(5000, self.refresh_status)
+
+    def _refresh_app_lock_status(self, config, running: bool, enforce_now: bool):
+        app_count = len(config.get("locked_apps", []))
+        if not app_count:
+            text = "No app rules yet."
+        elif not config["settings"].get("background_enabled"):
+            text = f"{app_count} app rule(s), but background unlock is off."
+        elif not running:
+            text = f"{app_count} app rule(s), but the lock engine is stopped."
+        elif not enforce_now:
+            text = f"{app_count} app rule(s), paused by schedule-only mode."
+        else:
+            text = f"{app_count} app rule(s), lock engine running."
+        self.app_lock_status_var.set(text)
 
     def refresh_summary(self):
         config = self._load()
@@ -487,32 +522,70 @@ class WindslockApp(ctk.CTk):
 
     def choose_running_app(self):
         try:
-            names = app_blocker.list_running_processes()
+            processes = app_blocker.list_running_process_details()
         except Exception as exc:
             messagebox.showerror(APP_TITLE, f"Could not list running apps:\n{exc}", parent=self)
             return
         picker = tk.Toplevel(self)
         picker.title("Running Apps")
-        picker.geometry("360x420")
-        listbox = tk.Listbox(picker)
-        listbox.pack(fill="both", expand=True, padx=10, pady=10)
-        for name in names:
-            listbox.insert("end", name)
+        picker.geometry("780x460")
+        picker.transient(self)
+
+        filter_var = tk.StringVar()
+        search = ctk.CTkEntry(picker, textvariable=filter_var)
+        search.pack(fill="x", padx=10, pady=(10, 6))
+
+        tree = ttk.Treeview(picker, columns=("pid", "name", "exe"), show="headings")
+        tree.heading("pid", text="PID")
+        tree.heading("name", text="Process")
+        tree.heading("exe", text="Path")
+        tree.column("pid", width=70, stretch=False)
+        tree.column("name", width=180, stretch=False)
+        tree.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+
+        def fill_tree():
+            query = filter_var.get().strip().lower()
+            tree.delete(*tree.get_children())
+            for process in processes:
+                haystack = f"{process['name']} {process['exe']}".lower()
+                if query and query not in haystack:
+                    continue
+                tree.insert("", "end", values=(process["pid"], process["name"], process["exe"]))
 
         def use_selected():
-            selection = listbox.curselection()
+            selection = tree.focus()
             if selection:
+                _, name, exe = tree.item(selection, "values")
                 self.app_entry.delete(0, "end")
-                self.app_entry.insert(0, listbox.get(selection[0]))
+                self.app_entry.insert(0, exe or name)
                 picker.destroy()
 
+        filter_var.trace_add("write", lambda *_: fill_tree())
+        fill_tree()
         ctk.CTkButton(picker, text="Use selected", command=use_selected).pack(pady=(0, 10))
+        search.focus_set()
 
     def add_app(self):
         value = self.app_entry.get().strip()
         if value:
-            self._run("Add app", lambda: app_blocker.add_locked_app(value, self.password))
-            self.app_entry.delete(0, "end")
+            result = self._run("Add app", lambda: self._add_app_and_start(value))
+            if result:
+                messagebox.showinfo(APP_TITLE, result, parent=self)
+                self.app_entry.delete(0, "end")
+
+    def _add_app_and_start(self, value: str) -> str:
+        app_blocker.add_locked_app(value, self.password)
+        config = self._load()
+        notes = []
+        if config["settings"].get("schedule_only_mode") and not focus_manager.should_enforce(config):
+            notes.append("Rule saved, but schedule-only mode is currently paused.")
+        if not config["settings"].get("background_enabled"):
+            cfg.enable_background_unlock(self.password)
+            notes.append("Background unlock enabled.")
+        if not runtime_control.is_enforcer_running():
+            runtime_control.start_enforcer()
+            notes.append("Lock engine started.")
+        return "App rule added. " + (" ".join(notes) if notes else "Lock engine is already running.")
 
     def remove_app(self):
         item = self.apps_tree.focus()
@@ -520,6 +593,25 @@ class WindslockApp(ctk.CTk):
             return
         _, value = self.apps_tree.item(item, "values")
         self._run("Remove app", lambda: app_blocker.remove_locked_app(value, self.password))
+
+    def test_selected_app_rule(self):
+        item = self.apps_tree.focus()
+        if not item:
+            messagebox.showinfo(APP_TITLE, "Select an app rule first.", parent=self)
+            return
+        mode, value = self.apps_tree.item(item, "values")
+        config = self._load()
+        matches = app_blocker.find_matching_processes([{"mode": mode, "value": value}], config)
+        running = runtime_control.is_enforcer_running()
+        enforce_now = focus_manager.should_enforce(config)
+        if matches and running and enforce_now:
+            detail = "\n".join(f"{match['name']} pid={match['pid']}" for match in matches[:8])
+            messagebox.showinfo(APP_TITLE, f"Rule matches running process(es):\n{detail}\n\nThe lock engine should block them.", parent=self)
+        elif matches:
+            reason = "lock engine is stopped" if not running else "schedule-only mode is paused"
+            messagebox.showwarning(APP_TITLE, f"Rule matches a running process, but {reason}.", parent=self)
+        else:
+            messagebox.showinfo(APP_TITLE, "No running process currently matches this rule.", parent=self)
 
     def add_site(self):
         value = self.site_entry.get().strip()
