@@ -37,6 +37,10 @@ def enforcer_lock_path() -> Path:
     return cfg.ensure_app_dir() / "enforcer.lock"
 
 
+def enforcer_error_path() -> Path:
+    return cfg.ensure_app_dir() / "enforcer_error.log"
+
+
 def read_enforcer_pid() -> int | None:
     path = enforcer_lock_path()
     if not path.exists():
@@ -53,11 +57,23 @@ def is_enforcer_running() -> bool:
         return False
     try:
         proc = app_blocker.psutil.Process(pid)
-        name = (proc.name() or "").lower()
-        cmdline = " ".join(proc.cmdline()).lower()
+        if not proc.is_running():
+            _clear_stale_lock()
+            return False
     except app_blocker.psutil.Error:
         _clear_stale_lock()
         return False
+
+    try:
+        name = (proc.name() or "").lower()
+        cmdline = " ".join(proc.cmdline()).lower()
+    except app_blocker.psutil.AccessDenied:
+        # The lock file was written by Windslock and the PID is alive. Some
+        # packaged/elevated Windows processes do not expose cmdline reliably.
+        return True
+    except app_blocker.psutil.Error:
+        return True
+
     looks_like_enforcer = (
         "windslockenforcer" in name
         or "windslockenforcer" in cmdline
@@ -66,27 +82,41 @@ def is_enforcer_running() -> bool:
     if not looks_like_enforcer:
         _clear_stale_lock()
         return False
-    return proc.is_running()
+    return True
 
 
 def start_enforcer() -> None:
     if is_enforcer_running():
         return
+    _clear_old_error_log()
     packaged_enforcer = _packaged_executable("WindslockEnforcer")
     if packaged_enforcer:
         subprocess.Popen([str(packaged_enforcer)], close_fds=True)
         return
+    if getattr(sys, "frozen", False):
+        raise RuntimeError("WindslockEnforcer.exe was not found next to the installed app.")
     subprocess.Popen([str(pythonw_executable()), str(enforcer_script())], close_fds=True)
 
 
-def start_enforcer_and_wait(timeout: float = 4.0) -> bool:
+def start_enforcer_and_wait(timeout: float = 15.0) -> bool:
     start_enforcer()
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if is_enforcer_running():
             return True
-        time.sleep(0.2)
+        time.sleep(0.3)
     return is_enforcer_running()
+
+
+def last_enforcer_error(max_chars: int = 1200) -> str:
+    path = enforcer_error_path()
+    if not path.exists():
+        return ""
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace").strip()
+    except OSError:
+        return ""
+    return text[-max_chars:]
 
 
 def open_gui() -> None:
@@ -119,8 +149,8 @@ def _packaged_executable(app_name: str) -> Path | None:
     candidates = []
     for name in names:
         candidates.append(exe.with_name(name))
-        candidates.append(exe.parent.parent / app_name / name)
         candidates.append(exe.parent / app_name / name)
+        candidates.append(exe.parent.parent / app_name / name)
     for candidate in candidates:
         if candidate.exists():
             return candidate
@@ -130,6 +160,13 @@ def _packaged_executable(app_name: str) -> Path | None:
 def _clear_stale_lock() -> None:
     try:
         enforcer_lock_path().unlink(missing_ok=True)
+    except OSError:
+        pass
+
+
+def _clear_old_error_log() -> None:
+    try:
+        enforcer_error_path().unlink(missing_ok=True)
     except OSError:
         pass
 
