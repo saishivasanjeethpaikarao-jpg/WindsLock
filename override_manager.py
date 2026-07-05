@@ -107,6 +107,41 @@ def request_override(password: str, target_type: str, target: str, phrase: str) 
     return request
 
 
+def password_unlock(password: str, target_type: str, target: str, minutes: int | None = None) -> dict[str, Any]:
+    """Create an immediate timed override after the user re-enters the master password."""
+    config = EncryptedDatabase(password)._data
+    changed = process_overrides(config)
+    now = utc_now()
+    if minutes is None:
+        minutes = int(config["settings"].get("password_unlock_minutes", 10))
+    minutes = int(minutes)
+    if minutes < 1 or minutes > 240:
+        raise ValueError("Unlock window must be between 1 and 240 minutes.")
+    request = {
+        "id": secrets.token_hex(8),
+        "target_type": target_type,
+        "target": target,
+        "key": target_key(target_type, target),
+        "status": STATUS_ACTIVE,
+        "requested_at": to_iso(now),
+        "activated_at": to_iso(now),
+        "expires_at": to_iso(now + timedelta(minutes=minutes)),
+        "method": "password",
+    }
+    config["override_requests"].append(request)
+    audit_log.add_event(
+        config,
+        "override",
+        target,
+        "password_unlocked",
+        f"type={target_type} expires_at={request['expires_at']}",
+    )
+    if changed:
+        audit_log.add_event(config, "override", "system", "processed", "processed pending override state")
+    EncryptedDatabase(password).save_dict(config)
+    return request
+
+
 def is_overridden(config: dict[str, Any], target_type: str, target: str, now: datetime | None = None) -> bool:
     process_overrides(config, now)
     key = target_key(target_type, target)

@@ -43,6 +43,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "background_enabled": False,
         "website_hosts_applied": False,
         "tamper_hardened": False,
+        "strict_app_lock": True,
+        "password_unlock_minutes": 10,
         "override_phrase": "I understand this is temporary and I will return to focus",
         "override_cooldown_minutes": 5,
         "override_window_minutes": 10,

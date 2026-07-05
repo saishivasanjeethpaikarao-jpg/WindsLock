@@ -120,6 +120,7 @@ class WindslockApp(ctk.CTk):
 
         self.status_var = ctk.StringVar()
         self.app_lock_status_var = ctk.StringVar()
+        self.site_lock_status_var = ctk.StringVar()
         self._status_after_id = None
         self.logo_image = None
         self._build()
@@ -252,10 +253,25 @@ class WindslockApp(ctk.CTk):
         app_buttons = ctk.CTkFrame(tab)
         app_buttons.pack(fill="x")
         ctk.CTkButton(app_buttons, text="Test selected", command=self.test_selected_app_rule).pack(side="left")
+        ctk.CTkButton(app_buttons, text="Password unlock selected", command=self.password_unlock_selected_app).pack(side="left", padx=(8, 0))
         ctk.CTkButton(app_buttons, text="Remove selected", command=self.remove_app).pack(side="right")
+
+        options = ctk.CTkFrame(tab)
+        options.pack(fill="x", pady=(8, 0))
+        self.strict_app_lock_var = ctk.BooleanVar(value=True)
+        ctk.CTkCheckBox(
+            options,
+            text="Stop locked apps immediately",
+            variable=self.strict_app_lock_var,
+            command=self.save_strict_app_lock,
+        ).pack(anchor="w")
 
     def _build_sites(self):
         tab = self._tab("Websites")
+        status = ctk.CTkFrame(tab, border_width=1)
+        status.pack(fill="x", pady=(0, 10), padx=4)
+        ctk.CTkLabel(status, textvariable=self.site_lock_status_var, anchor="w").pack(side="left", fill="x", expand=True, padx=12, pady=10)
+        ctk.CTkButton(status, text="Check", command=self.check_website_block).pack(side="right", padx=(0, 12), pady=10)
         ctk.CTkLabel(tab, text="Whole-domain blocks use the Windows hosts file.").pack(anchor="w")
         form = ctk.CTkFrame(tab)
         form.pack(fill="x", pady=(6, 0))
@@ -268,7 +284,7 @@ class WindslockApp(ctk.CTk):
         buttons = ctk.CTkFrame(tab)
         buttons.pack(fill="x")
         ctk.CTkButton(buttons, text="Remove selected", command=self.remove_site).pack(side="left")
-        ctk.CTkButton(buttons, text="Apply hosts block", command=self.apply_hosts).pack(side="right")
+        ctk.CTkButton(buttons, text="Apply + flush DNS", command=self.apply_hosts).pack(side="right")
         ctk.CTkButton(buttons, text="Rollback hosts entries", command=self.rollback_hosts).pack(side="right", padx=(0, 8))
 
         ttk.Separator(tab).pack(fill="x", pady=12)
@@ -379,6 +395,7 @@ class WindslockApp(ctk.CTk):
             f"Hosts: {'applied' if config['settings'].get('website_hosts_applied') else 'not applied'}"
         )
         self._refresh_app_lock_status(config, running, enforce_now)
+        self._refresh_site_lock_status(config)
         if schedule:
             self._schedule_status_refresh()
 
@@ -403,6 +420,16 @@ class WindslockApp(ctk.CTk):
         else:
             text = f"{app_count} app rule(s), lock engine running."
         self.app_lock_status_var.set(text)
+
+    def _refresh_site_lock_status(self, config):
+        site_count = len(config.get("blocked_sites", []))
+        if not site_count:
+            text = "No website rules yet."
+        elif not config["settings"].get("website_hosts_applied"):
+            text = f"{site_count} website rule(s), not applied to Windows yet."
+        else:
+            text = f"{site_count} website rule(s), hosts block marked applied."
+        self.site_lock_status_var.set(text)
 
     def refresh_summary(self):
         config = self._load()
@@ -435,6 +462,7 @@ class WindslockApp(ctk.CTk):
         self.apps_tree.delete(*self.apps_tree.get_children())
         for rule in app_blocker.list_locked_apps(self.password):
             self.apps_tree.insert("", "end", values=(rule["mode"], rule["value"]))
+        self.strict_app_lock_var.set(bool(self._load()["settings"].get("strict_app_lock", True)))
 
     def refresh_focus(self):
         config = self._load()
@@ -613,6 +641,41 @@ class WindslockApp(ctk.CTk):
         else:
             messagebox.showinfo(APP_TITLE, "No running process currently matches this rule.", parent=self)
 
+    def password_unlock_selected_app(self):
+        item = self.apps_tree.focus()
+        if not item:
+            messagebox.showinfo(APP_TITLE, "Select an app rule first.", parent=self)
+            return
+        _, value = self.apps_tree.item(item, "values")
+        password = simpledialog.askstring(APP_TITLE, "Master password", show="*", parent=self)
+        if not password:
+            return
+        if not cfg.verify_password(password):
+            messagebox.showerror(APP_TITLE, "Wrong password.", parent=self)
+            return
+        config = self._load()
+        minutes = int(config["settings"].get("password_unlock_minutes", 10))
+        result = self._run(
+            "Password unlock",
+            lambda: override_manager.password_unlock(password, "app", value, minutes),
+        )
+        if result:
+            messagebox.showinfo(APP_TITLE, f"Unlocked for {minutes} minute(s).", parent=self)
+
+    def save_strict_app_lock(self):
+        def update():
+            config = self._load()
+            config["settings"]["strict_app_lock"] = bool(self.strict_app_lock_var.get())
+            audit_log.add_event(
+                config,
+                "app",
+                "settings",
+                "strict_lock_updated",
+                f"enabled={config['settings']['strict_app_lock']}",
+            )
+            EncryptedDatabase(self.password).save_dict(config)
+        self._run("Save app lock mode", update)
+
     def add_site(self):
         value = self.site_entry.get().strip()
         if value:
@@ -639,10 +702,42 @@ class WindslockApp(ctk.CTk):
         self._run("Remove path rule", lambda: url_rule_engine.remove_path_rule(domain, path_prefix, self.password))
 
     def apply_hosts(self):
-        self._run("Apply hosts block", lambda: site_blocker.apply_hosts_block(self.password))
+        result = self._run("Apply hosts block", lambda: site_blocker.apply_hosts_block(self.password))
+        if result:
+            messagebox.showinfo(
+                APP_TITLE,
+                "Website block applied and DNS cache flushed.\n\nIf a Chromium browser still opens it, restart the browser and turn off Secure DNS in Chrome, Edge, or Brave.",
+                parent=self,
+            )
 
     def rollback_hosts(self):
-        self._run("Rollback hosts block", lambda: site_blocker.rollback_hosts_block())
+        self._run("Rollback hosts block", lambda: self._rollback_hosts_and_save())
+
+    def _rollback_hosts_and_save(self):
+        path = site_blocker.rollback_hosts_block()
+        config = self._load()
+        config["settings"]["website_hosts_applied"] = False
+        audit_log.add_event(config, "site", "hosts", "rollback", f"path={path}")
+        EncryptedDatabase(self.password).save_dict(config)
+        return path
+
+    def check_website_block(self):
+        status = self._run("Check website block", lambda: site_blocker.website_block_status(self.password), refresh=False)
+        if not status:
+            return
+        if status["error"] == "admin_required":
+            detail = "Windows did not allow Windslock to edit the hosts file. Run Windslock as administrator, then Apply + flush DNS."
+        elif status["domain_count"] and not status["rules_present"]:
+            detail = "Rules are saved but not present in the hosts file yet. Press Apply + flush DNS from an administrator run."
+        elif status["domain_count"]:
+            detail = "Rules are present in the hosts file. Restart the browser if it cached the site. For Chrome, Edge, and Brave, also turn off Secure DNS if needed."
+        else:
+            detail = "No website rules are saved yet."
+        messagebox.showinfo(
+            APP_TITLE,
+            f"{detail}\n\nHosts file:\n{status['hosts_path']}",
+            parent=self,
+        )
 
     def lock_folder(self):
         path = filedialog.askdirectory(title="Choose folder to lock")

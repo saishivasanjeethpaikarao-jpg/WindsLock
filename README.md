@@ -12,6 +12,8 @@ startup tooling.
 - **Modern Premium UI**: Sleek dark/light mode interface built with CustomTkinter.
 - **Cross-Platform Security**: Background enforcement and tamper-proof DB storage using Windows DPAPI or Linux Keyring.
 - **Application Locking**: Block desktop apps dynamically by process name or full path.
+- **Strict app lock mode**: By default, matched apps are stopped immediately. You can switch to detect/log mode from the Apps tab.
+- **Password unlock**: Re-enter the master password to temporarily unlock a selected app for the configured window.
 - **Path-level Website Blocking**: Powered by a robust MITM proxy, restrict access to specific paths (e.g., `youtube.com/shorts`) without blocking the whole domain.
 - **Folder Encryption**: AES-level encryption secures local folders from prying eyes.
 - **Robust Database**: Features a zero-leakage `EncryptedDatabase` architecture leveraging Fernet encryption for full DB security.
@@ -169,6 +171,17 @@ Windslock writes only between these markers:
 Rollback removes only that marked section. Applying or rolling back the real
 hosts file usually requires an elevated terminal.
 
+For Chrome, Edge, Brave, and other Chromium browsers:
+
+- Run Windslock as administrator before pressing **Apply + flush DNS**.
+- Restart the browser after applying rules.
+- If a blocked domain still opens, turn off the browser's Secure DNS / DNS-over-HTTPS setting, then apply again.
+- Whole-domain blocks now write IPv4 and IPv6 entries for the domain plus common `www.` and `m.` variants.
+- Hosts-file blocking cannot wildcard every possible subdomain. Add specific subdomains when needed.
+
+The Websites tab includes a **Check** button that shows whether Windslock can
+write the hosts file and whether the saved rules are present.
+
 ## Path-Level Website Blocking
 
 Hosts-file blocking cannot see URL paths. It can block `youtube.com`, but not
@@ -229,6 +242,10 @@ For app overrides, use the same target shown in the app lock table, such as
 `notepad.exe` or the full normalized executable path. For whole-site overrides,
 use the domain, such as `youtube.com`. For URL path overrides, use
 `domain/path`, such as `youtube.com/shorts`.
+
+The Apps tab also has **Password unlock selected**. It asks for the master
+password again, creates an immediate timed app override, logs the action, and
+auto re-locks when the window expires. The default window is 10 minutes.
 
 ## Focus Presets And Schedules
 

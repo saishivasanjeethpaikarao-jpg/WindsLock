@@ -152,15 +152,16 @@ def watch_once(locked_apps: list[dict[str, str]], config: dict | None = None) ->
     """Single process scan. Kills matches and returns blocked attempts."""
     ps = require_psutil()
     blocked = []
+    strict = True if config is None else bool(config.get("settings", {}).get("strict_app_lock", True))
     for proc in ps.process_iter(["pid", "name", "exe"]):
         matched, target = _process_matches(proc, locked_apps, config)
         if matched:
-            killed = _kill(proc)
+            killed = _kill(proc) if strict else False
             blocked.append(
                 {
                     "pid": str(getattr(proc, "pid", "")),
                     "target": target,
-                    "action": "killed" if killed else "access_denied",
+                    "action": "killed" if killed else ("detected" if not strict else "access_denied"),
                 }
             )
     return blocked
