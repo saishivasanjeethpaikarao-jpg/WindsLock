@@ -17,6 +17,13 @@ startup tooling.
 - [Build And Release Guide](docs/BUILD_RELEASES.md)
 - [Roadmap](docs/ROADMAP.md)
 
+If a Windows EXE says it cannot load `python312.dll`, see the
+[Windows Python DLL Error](docs/BUILD_RELEASES.md#windows-python-dll-error)
+section.
+
+For normal laptop use, prefer the `Windslock-Windows-OneFile.zip` artifact. It
+contains standalone EXEs and avoids missing `_internal` / Python DLL issues.
+
 ## What Works
 
 - Locks desktop apps by process name, such as `steam.exe`, or by full executable path.

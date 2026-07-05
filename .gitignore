@@ -5,6 +5,7 @@ __pycache__/
 .pytest_cache/
 build/
 dist/
+dist-onefile/
 *.spec
 test_appdata_tmp/
 *.log

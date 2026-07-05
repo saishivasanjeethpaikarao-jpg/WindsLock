@@ -36,7 +36,12 @@ jobs:
         run: |
           pyinstaller --noconfirm --windowed --icon assets\windslock.ico --add-data "assets;assets" --name Windslock gui.py
           pyinstaller --noconfirm --windowed --icon assets\windslock.ico --add-data "assets;assets" --name WindslockTray tray_app.py
+          pyinstaller --noconfirm --console --icon assets\windslock.ico --add-data "assets;assets" --name WindslockEnforcer enforcer.py
           pyinstaller --noconfirm --console --icon assets\windslock.ico --add-data "assets;assets" --add-data "proxy_addon.py;." --name WindslockProxy proxy_runner.py
+          pyinstaller --noconfirm --onefile --windowed --icon assets\windslock.ico --add-data "assets;assets" --distpath dist-onefile --name Windslock gui.py
+          pyinstaller --noconfirm --onefile --windowed --icon assets\windslock.ico --add-data "assets;assets" --distpath dist-onefile --name WindslockTray tray_app.py
+          pyinstaller --noconfirm --onefile --console --icon assets\windslock.ico --add-data "assets;assets" --distpath dist-onefile --name WindslockEnforcer enforcer.py
+          pyinstaller --noconfirm --onefile --console --icon assets\windslock.ico --add-data "assets;assets" --add-data "proxy_addon.py;." --distpath dist-onefile --name WindslockProxy proxy_runner.py
 
       - name: Copy launch scripts and docs
         shell: pwsh
@@ -51,17 +56,22 @@ jobs:
           Copy-Item -Recurse docs dist\Windslock\docs
           Copy-Item -Recurse assets dist\Windslock\assets
           Copy-Item -Recurse dist\WindslockTray dist\Windslock\WindslockTray
+          Copy-Item -Recurse dist\WindslockEnforcer dist\Windslock\WindslockEnforcer
           Copy-Item -Recurse dist\WindslockProxy dist\Windslock\WindslockProxy
 
       - name: Package Windows artifact
         shell: pwsh
-        run: Compress-Archive -Path dist\Windslock\* -DestinationPath Windslock-Windows.zip
+        run: |
+          Compress-Archive -Path dist\Windslock\* -DestinationPath Windslock-Windows.zip
+          Compress-Archive -Path dist-onefile\*.exe, README.md, docs, assets -DestinationPath Windslock-Windows-OneFile.zip
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
           name: Windslock-Windows
-          path: Windslock-Windows.zip
+          path: |
+            Windslock-Windows.zip
+            Windslock-Windows-OneFile.zip
 
   linux:
     name: Build Linux desktop app
@@ -117,4 +127,5 @@ jobs:
         with:
           files: |
             artifacts/Windslock-Windows/Windslock-Windows.zip
+            artifacts/Windslock-Windows/Windslock-Windows-OneFile.zip
             artifacts/Windslock-Linux/Windslock-Linux.tar.gz
