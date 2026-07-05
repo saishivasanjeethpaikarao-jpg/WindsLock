@@ -43,6 +43,45 @@ jobs:
           pyinstaller --noconfirm --onefile --console --icon assets\windslock.ico --add-data "assets;assets" --distpath dist-onefile --name WindslockEnforcer enforcer.py
           pyinstaller --noconfirm --onefile --console --icon assets\windslock.ico --add-data "assets;assets" --add-data "proxy_addon.py;." --distpath dist-onefile --name WindslockProxy proxy_runner.py
 
+      - name: Sign Windows EXEs when certificate is configured
+        shell: pwsh
+        env:
+          WINDOWS_SIGNING_CERT_BASE64: ${{ secrets.WINDOWS_SIGNING_CERT_BASE64 }}
+          WINDOWS_SIGNING_CERT_PASSWORD: ${{ secrets.WINDOWS_SIGNING_CERT_PASSWORD }}
+          WINDOWS_TIMESTAMP_URL: ${{ secrets.WINDOWS_TIMESTAMP_URL }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_SIGNING_CERT_BASE64)) {
+            Write-Host "WINDOWS_SIGNING_CERT_BASE64 is not configured; skipping Authenticode signing."
+            exit 0
+          }
+          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_TIMESTAMP_URL)) {
+            $env:WINDOWS_TIMESTAMP_URL = "http://timestamp.digicert.com"
+          }
+          $pfxPath = Join-Path $env:RUNNER_TEMP "windslock-signing.pfx"
+          [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:WINDOWS_SIGNING_CERT_BASE64))
+          $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter signtool.exe -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -match "\\x64\\signtool.exe$" } |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1
+          if (-not $signtool) { throw "signtool.exe was not found on the runner." }
+          $files = @(
+            "dist\Windslock\Windslock.exe",
+            "dist\WindslockTray\WindslockTray.exe",
+            "dist\WindslockEnforcer\WindslockEnforcer.exe",
+            "dist\WindslockProxy\WindslockProxy.exe",
+            "dist-onefile\Windslock.exe",
+            "dist-onefile\WindslockTray.exe",
+            "dist-onefile\WindslockEnforcer.exe",
+            "dist-onefile\WindslockProxy.exe"
+          ) | Where-Object { Test-Path $_ }
+          foreach ($file in $files) {
+            & $signtool.FullName sign /fd SHA256 /td SHA256 /tr $env:WINDOWS_TIMESTAMP_URL /f $pfxPath /p $env:WINDOWS_SIGNING_CERT_PASSWORD $file
+            if ($LASTEXITCODE -ne 0) { throw "Signing failed for $file" }
+            & $signtool.FullName verify /pa /all $file
+            if ($LASTEXITCODE -ne 0) { throw "Signature verification failed for $file" }
+          }
+          Remove-Item $pfxPath -Force
+
       - name: Copy launch scripts and docs
         shell: pwsh
         run: |
@@ -80,6 +119,41 @@ jobs:
           & $iscc packaging\windows\Windslock.iss
           Copy-Item dist\installer\Windslock-Setup.exe Windslock-Setup.exe
 
+      - name: Sign Windows installer when certificate is configured
+        shell: pwsh
+        env:
+          WINDOWS_SIGNING_CERT_BASE64: ${{ secrets.WINDOWS_SIGNING_CERT_BASE64 }}
+          WINDOWS_SIGNING_CERT_PASSWORD: ${{ secrets.WINDOWS_SIGNING_CERT_PASSWORD }}
+          WINDOWS_TIMESTAMP_URL: ${{ secrets.WINDOWS_TIMESTAMP_URL }}
+        run: |
+          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_SIGNING_CERT_BASE64)) {
+            Write-Host "WINDOWS_SIGNING_CERT_BASE64 is not configured; skipping installer signing."
+            exit 0
+          }
+          if ([string]::IsNullOrWhiteSpace($env:WINDOWS_TIMESTAMP_URL)) {
+            $env:WINDOWS_TIMESTAMP_URL = "http://timestamp.digicert.com"
+          }
+          $pfxPath = Join-Path $env:RUNNER_TEMP "windslock-signing.pfx"
+          [IO.File]::WriteAllBytes($pfxPath, [Convert]::FromBase64String($env:WINDOWS_SIGNING_CERT_BASE64))
+          $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter signtool.exe -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -match "\\x64\\signtool.exe$" } |
+            Sort-Object FullName -Descending |
+            Select-Object -First 1
+          if (-not $signtool) { throw "signtool.exe was not found on the runner." }
+          & $signtool.FullName sign /fd SHA256 /td SHA256 /tr $env:WINDOWS_TIMESTAMP_URL /f $pfxPath /p $env:WINDOWS_SIGNING_CERT_PASSWORD Windslock-Setup.exe
+          if ($LASTEXITCODE -ne 0) { throw "Signing failed for Windslock-Setup.exe" }
+          & $signtool.FullName verify /pa /all Windslock-Setup.exe
+          if ($LASTEXITCODE -ne 0) { throw "Signature verification failed for Windslock-Setup.exe" }
+          Remove-Item $pfxPath -Force
+
+      - name: Generate Windows checksums
+        shell: pwsh
+        run: |
+          $files = @("Windslock-Windows.zip", "Windslock-Windows-OneFile.zip", "Windslock-Setup.exe")
+          Get-FileHash -Algorithm SHA256 $files |
+            ForEach-Object { "$($_.Hash.ToLowerInvariant())  $([IO.Path]::GetFileName($_.Path))" } |
+            Set-Content -Encoding ascii Windslock-Windows-SHA256SUMS.txt
+
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
         with:
@@ -88,6 +162,7 @@ jobs:
             Windslock-Windows.zip
             Windslock-Windows-OneFile.zip
             Windslock-Setup.exe
+            Windslock-Windows-SHA256SUMS.txt
 
   linux:
     name: Build Linux desktop app
@@ -121,13 +196,36 @@ jobs:
       - name: Build Debian package
         run: bash scripts/build_linux_deb.sh
 
+      - name: Generate Linux checksums
+        run: |
+          sha256sum dist/Windslock-Linux.tar.gz dist/Windslock-Linux-Debian.deb > dist/Windslock-Linux-SHA256SUMS.txt
+
+      - name: Sign Linux artifacts when GPG key is configured
+        env:
+          RELEASE_GPG_PRIVATE_KEY: ${{ secrets.RELEASE_GPG_PRIVATE_KEY }}
+          RELEASE_GPG_PASSPHRASE: ${{ secrets.RELEASE_GPG_PASSPHRASE }}
+        run: |
+          if [ -z "${RELEASE_GPG_PRIVATE_KEY}" ]; then
+            echo "RELEASE_GPG_PRIVATE_KEY is not configured; skipping Linux detached signatures."
+            exit 0
+          fi
+          export GNUPGHOME="$(mktemp -d)"
+          printf '%s' "${RELEASE_GPG_PRIVATE_KEY}" | gpg --batch --import
+          for artifact in dist/Windslock-Linux.tar.gz dist/Windslock-Linux-Debian.deb dist/Windslock-Linux-SHA256SUMS.txt; do
+            gpg --batch --yes --pinentry-mode loopback --passphrase "${RELEASE_GPG_PASSPHRASE}" --armor --detach-sign "${artifact}"
+          done
+          rm -rf "${GNUPGHOME}"
+
       - name: Upload Linux artifact
         uses: actions/upload-artifact@v4
         with:
           name: Windslock-Linux
+          if-no-files-found: warn
           path: |
             dist/Windslock-Linux.tar.gz
             dist/Windslock-Linux-Debian.deb
+            dist/Windslock-Linux-SHA256SUMS.txt
+            dist/*.asc
 
   publish-main-release:
     name: Publish latest desktop release
@@ -157,6 +255,11 @@ jobs:
             - Windows full portable folder: Windslock-Windows.zip
             - Ubuntu, Linux Mint, Kali, Debian: Windslock-Linux-Debian.deb
             - Other Linux desktops: Windslock-Linux.tar.gz
+
+            Verification:
+            - Use Windslock-Windows-SHA256SUMS.txt and Windslock-Linux-SHA256SUMS.txt to verify downloads.
+            - Windows files are Authenticode-signed when WINDOWS_SIGNING_CERT_BASE64 is configured.
+            - Linux .asc detached signatures are included when RELEASE_GPG_PRIVATE_KEY is configured.
           prerelease: true
           make_latest: true
           overwrite_files: true
@@ -164,8 +267,11 @@ jobs:
             artifacts/Windslock-Windows/Windslock-Windows.zip
             artifacts/Windslock-Windows/Windslock-Windows-OneFile.zip
             artifacts/Windslock-Windows/Windslock-Setup.exe
+            artifacts/Windslock-Windows/Windslock-Windows-SHA256SUMS.txt
             artifacts/Windslock-Linux/Windslock-Linux.tar.gz
             artifacts/Windslock-Linux/Windslock-Linux-Debian.deb
+            artifacts/Windslock-Linux/Windslock-Linux-SHA256SUMS.txt
+            artifacts/Windslock-Linux/*.asc
 
   attach-release-artifacts:
     name: Attach artifacts to release
@@ -189,5 +295,8 @@ jobs:
             artifacts/Windslock-Windows/Windslock-Windows.zip
             artifacts/Windslock-Windows/Windslock-Windows-OneFile.zip
             artifacts/Windslock-Windows/Windslock-Setup.exe
+            artifacts/Windslock-Windows/Windslock-Windows-SHA256SUMS.txt
             artifacts/Windslock-Linux/Windslock-Linux.tar.gz
             artifacts/Windslock-Linux/Windslock-Linux-Debian.deb
+            artifacts/Windslock-Linux/Windslock-Linux-SHA256SUMS.txt
+            artifacts/Windslock-Linux/*.asc
