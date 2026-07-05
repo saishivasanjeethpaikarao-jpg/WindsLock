@@ -78,6 +78,7 @@ jobs:
             throw "Inno Setup compiler was not found."
           }
           & $iscc packaging\windows\Windslock.iss
+          Copy-Item dist\installer\Windslock-Setup.exe Windslock-Setup.exe
 
       - name: Upload Windows artifact
         uses: actions/upload-artifact@v4
@@ -86,7 +87,7 @@ jobs:
           path: |
             Windslock-Windows.zip
             Windslock-Windows-OneFile.zip
-            dist/installer/Windslock-Setup.exe
+            Windslock-Setup.exe
 
   linux:
     name: Build Linux desktop app
@@ -114,7 +115,7 @@ jobs:
       - name: Generate brand assets
         run: python generate_brand_assets.py
 
-      - name: Build Linux bundle and Debian package
+      - name: Build Linux bundle
         run: bash scripts/build_linux_app.sh
 
       - name: Build Debian package
@@ -127,6 +128,44 @@ jobs:
           path: |
             dist/Windslock-Linux.tar.gz
             dist/Windslock-Linux-Debian.deb
+
+  publish-main-release:
+    name: Publish latest desktop release
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [windows, linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Publish latest release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest-main
+          name: Windslock Latest Desktop Builds
+          body: |
+            Automatic desktop build from the main branch.
+
+            Downloads:
+            - Windows installer: Windslock-Setup.exe
+            - Windows portable: Windslock-Windows-OneFile.zip
+            - Windows full portable folder: Windslock-Windows.zip
+            - Ubuntu, Linux Mint, Kali, Debian: Windslock-Linux-Debian.deb
+            - Other Linux desktops: Windslock-Linux.tar.gz
+          prerelease: true
+          make_latest: true
+          overwrite_files: true
+          files: |
+            artifacts/Windslock-Windows/Windslock-Windows.zip
+            artifacts/Windslock-Windows/Windslock-Windows-OneFile.zip
+            artifacts/Windslock-Windows/Windslock-Setup.exe
+            artifacts/Windslock-Linux/Windslock-Linux.tar.gz
+            artifacts/Windslock-Linux/Windslock-Linux-Debian.deb
 
   attach-release-artifacts:
     name: Attach artifacts to release
@@ -145,6 +184,7 @@ jobs:
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
+          overwrite_files: true
           files: |
             artifacts/Windslock-Windows/Windslock-Windows.zip
             artifacts/Windslock-Windows/Windslock-Windows-OneFile.zip
