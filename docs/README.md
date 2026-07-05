@@ -9,6 +9,7 @@ This folder contains product, design, architecture, and platform planning docs.
 - [Workflows](WORKFLOWS.md): setup, app locking, website locking, overrides, focus, folders, recovery, startup.
 - [Architecture](ARCHITECTURE.md): module map, data flow, state model, boundaries, tests.
 - [Windows And Linux Plan](CROSS_PLATFORM_PLAN.md): platform adapter plan, Linux roadmap, packaging.
+- [Build And Release Guide](BUILD_RELEASES.md): GitHub Actions, Windows EXE builds, Linux app bundle.
 - [Roadmap](ROADMAP.md): product priorities, release tracks, and future ideas.
 
 ## Design Direction

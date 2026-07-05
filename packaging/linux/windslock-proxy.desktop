@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Windslock Proxy
+GenericName=Path-Level Blocking Proxy
+Comment=Start the Windslock proxy for URL path blocking
+Exec=windslock-proxy
+Icon=windslock
+Terminal=true
+Categories=Utility;Security;
+StartupNotify=false

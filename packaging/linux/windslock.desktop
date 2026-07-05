@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Windslock
+GenericName=Focus Security
+Comment=Lock distracting apps, websites, URL paths, and folders
+Exec=windslock
+Icon=windslock
+Terminal=false
+Categories=Utility;Security;
+StartupNotify=true

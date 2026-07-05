@@ -14,6 +14,7 @@ startup tooling.
 - [Workflows](docs/WORKFLOWS.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Windows And Linux Plan](docs/CROSS_PLATFORM_PLAN.md)
+- [Build And Release Guide](docs/BUILD_RELEASES.md)
 - [Roadmap](docs/ROADMAP.md)
 
 ## What Works
