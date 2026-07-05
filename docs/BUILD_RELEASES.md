@@ -12,8 +12,11 @@ Workflows:
 
 Artifacts:
 
+- `Windslock-Setup.exe`
 - `Windslock-Windows.zip`
+- `Windslock-Windows-OneFile.zip`
 - `Windslock-Linux.tar.gz`
+- `Windslock-Linux-Debian.deb`
 
 Triggers:
 
@@ -21,8 +24,16 @@ Triggers:
 - Manual workflow dispatch
 - Published GitHub release
 
-On a published release, the workflow uploads both desktop artifacts to the
-release assets.
+On a published release, the workflow uploads the Windows installer, Windows
+portable packages, Linux portable package, and Debian-family Linux package to
+the release assets.
+
+Recommended downloads:
+
+- Windows: `Windslock-Setup.exe`
+- Windows portable fallback: `Windslock-Windows-OneFile.zip`
+- Ubuntu, Linux Mint, Kali, Debian: `Windslock-Linux-Debian.deb`
+- Other Linux desktops: `Windslock-Linux.tar.gz`
 
 ## Windows Local Build
 
@@ -38,6 +49,8 @@ Outputs:
 dist\Windslock\Windslock.exe
 dist\WindslockTray\WindslockTray.exe
 dist\WindslockProxy\WindslockProxy.exe
+dist\installer\Windslock-Setup.exe
+dist-onefile\Windslock.exe
 ```
 
 Recommended package shape:
@@ -64,13 +77,18 @@ Linux builds run in GitHub Actions on Ubuntu. The build script is:
 
 ```bash
 bash scripts/build_linux_app.sh
+bash scripts/build_linux_deb.sh
 ```
 
-Output:
+Outputs:
 
 ```text
 dist/Windslock-Linux.tar.gz
+dist/Windslock-Linux-Debian.deb
 ```
+
+`Windslock-Linux-Debian.deb` is for Debian-family x64 desktops: Ubuntu, Linux
+Mint, Kali, Debian, and close derivatives.
 
 Package shape:
 
@@ -94,6 +112,13 @@ Install for current Linux user:
 tar -xzf Windslock-Linux.tar.gz
 cd Windslock-Linux
 bash packaging/linux/install_linux_user.sh
+```
+
+Install the Debian-family package:
+
+```bash
+sudo apt install ./Windslock-Linux-Debian.deb
+windslock
 ```
 
 Uninstall:
