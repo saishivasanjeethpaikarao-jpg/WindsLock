@@ -24,6 +24,17 @@ import url_rule_engine
 
 
 APP_TITLE = brand.APP_NAME
+WINDOW_BG = ("#F5F7FA", "#0B1120")
+PANEL_BG = ("#FFFFFF", "#111827")
+PANEL_ALT = ("#EEF2F7", "#1F2937")
+BORDER = ("#D8DEE9", "#243244")
+TEXT_MUTED = ("#475569", "#94A3B8")
+TEXT_MAIN = ("#0F172A", "#E5E7EB")
+ACCENT = "#2563EB"
+ACCENT_HOVER = "#1D4ED8"
+SUCCESS = "#16A34A"
+DANGER = "#DC2626"
+WARNING = "#D97706"
 
 
 class SetupDialog(simpledialog.Dialog):
@@ -113,33 +124,40 @@ class WindslockApp(ctk.CTk):
         ctk.set_default_color_theme('blue')
         self.password = password
         self.title(f"{brand.APP_NAME} - {brand.APP_TAGLINE}")
-        self.geometry("980x640")
-        self.minsize(860, 560)
+        self.geometry("1180x760")
+        self.minsize(980, 640)
         self.protocol("WM_DELETE_WINDOW", self.hide_to_background)
         self._set_window_icon()
+        self._install_styles()
 
         self.status_var = ctk.StringVar()
         self.app_lock_status_var = ctk.StringVar()
         self.site_lock_status_var = ctk.StringVar()
+        self.background_metric_var = ctk.StringVar()
+        self.startup_metric_var = ctk.StringVar()
+        self.hosts_metric_var = ctk.StringVar()
+        self.rules_metric_var = ctk.StringVar()
         self._status_after_id = None
         self.logo_image = None
         self._build()
         self.refresh_all()
 
     def _build(self):
-        root = ctk.CTkFrame(self)
-        root.pack(fill="both", expand=True)
+        root = ctk.CTkFrame(self, fg_color=WINDOW_BG, corner_radius=0)
+        root.pack(fill="both", expand=True, padx=18, pady=18)
 
-        top = ctk.CTkFrame(root)
-        top.pack(fill="x", pady=(0, 10))
+        top = ctk.CTkFrame(root, fg_color=PANEL_BG, border_color=BORDER, border_width=1, corner_radius=14)
+        top.pack(fill="x", pady=(0, 14))
         if brand.logo_png().exists():
             self.logo_image = tk.PhotoImage(file=str(brand.logo_png())).subsample(4, 4)
-            ctk.CTkLabel(top, image=self.logo_image).pack(side="left", padx=(0, 12))
-        title_block = ctk.CTkFrame(top)
-        title_block.pack(side="left")
-        ctk.CTkLabel(title_block, text=brand.APP_NAME, font=("Segoe UI", 20, "bold")).pack(anchor="w")
-        ctk.CTkLabel(title_block, text=brand.APP_TAGLINE, text_color="#334155").pack(anchor="w")
-        ctk.CTkLabel(top, textvariable=self.status_var).pack(side="right")
+            ctk.CTkLabel(top, image=self.logo_image, text="").pack(side="left", padx=(16, 12), pady=14)
+        title_block = ctk.CTkFrame(top, fg_color="transparent")
+        title_block.pack(side="left", pady=14)
+        ctk.CTkLabel(title_block, text=brand.APP_NAME, font=("Segoe UI", 24, "bold"), text_color=TEXT_MAIN).pack(anchor="w")
+        ctk.CTkLabel(title_block, text=brand.APP_TAGLINE, text_color=TEXT_MUTED).pack(anchor="w")
+        status_pill = ctk.CTkFrame(top, fg_color=PANEL_ALT, corner_radius=999)
+        status_pill.pack(side="right", padx=16, pady=18)
+        ctk.CTkLabel(status_pill, textvariable=self.status_var, text_color=TEXT_MAIN).pack(padx=14, pady=7)
 
         self.notebook = ttk.Notebook(root)
         self.notebook.pack(fill="both", expand=True)
@@ -153,7 +171,7 @@ class WindslockApp(ctk.CTk):
         self._build_settings()
 
     def _tab(self, name: str) -> ctk.CTkFrame:
-        frame = ctk.CTkFrame(self.notebook)
+        frame = ctk.CTkFrame(self.notebook, fg_color=WINDOW_BG, corner_radius=0)
         self.notebook.add(frame, text=name)
         return frame
 
@@ -164,35 +182,132 @@ class WindslockApp(ctk.CTk):
         except Exception:
             pass
 
+    def _install_styles(self):
+        self.configure(fg_color=WINDOW_BG)
+        style = ttk.Style(self)
+        try:
+            style.theme_use("clam")
+        except tk.TclError:
+            pass
+        style.configure("TNotebook", background="#F5F7FA", borderwidth=0)
+        style.configure(
+            "TNotebook.Tab",
+            padding=(18, 10),
+            font=("Segoe UI", 10, "bold"),
+            background="#E2E8F0",
+            foreground="#334155",
+        )
+        style.map("TNotebook.Tab", background=[("selected", "#FFFFFF")], foreground=[("selected", "#0F172A")])
+        style.configure(
+            "Treeview",
+            rowheight=30,
+            borderwidth=0,
+            background="#FFFFFF",
+            fieldbackground="#FFFFFF",
+            foreground="#0F172A",
+            font=("Segoe UI", 10),
+        )
+        style.configure(
+            "Treeview.Heading",
+            padding=(8, 8),
+            background="#E2E8F0",
+            foreground="#0F172A",
+            font=("Segoe UI", 10, "bold"),
+        )
+        style.map("Treeview", background=[("selected", "#DBEAFE")], foreground=[("selected", "#0F172A")])
+
+    def _button(self, parent, text: str, command, variant: str = "primary", width: int | None = None):
+        colors = {
+            "primary": (ACCENT, ACCENT_HOVER, "#FFFFFF"),
+            "success": (SUCCESS, "#15803D", "#FFFFFF"),
+            "danger": (DANGER, "#B91C1C", "#FFFFFF"),
+            "muted": ("#E2E8F0", "#CBD5E1", "#0F172A"),
+        }
+        fg, hover, text_color = colors.get(variant, colors["primary"])
+        return ctk.CTkButton(
+            parent,
+            text=text,
+            command=command,
+            width=width or 140,
+            height=36,
+            corner_radius=8,
+            fg_color=fg,
+            hover_color=hover,
+            text_color=text_color,
+            font=("Segoe UI", 10, "bold"),
+        )
+
+    def _card(self, parent, **pack_options):
+        frame = ctk.CTkFrame(parent, fg_color=PANEL_BG, border_color=BORDER, border_width=1, corner_radius=12)
+        frame.pack(**pack_options)
+        return frame
+
+    def _metric_card(self, parent, title: str, variable: ctk.StringVar, accent: str):
+        card = ctk.CTkFrame(parent, fg_color=PANEL_BG, border_color=BORDER, border_width=1, corner_radius=12)
+        ctk.CTkFrame(card, width=4, fg_color=accent, corner_radius=999).pack(side="left", fill="y", padx=(0, 10))
+        body = ctk.CTkFrame(card, fg_color="transparent")
+        body.pack(side="left", fill="both", expand=True, padx=(0, 12), pady=12)
+        ctk.CTkLabel(body, text=title, text_color=TEXT_MUTED, font=("Segoe UI", 10, "bold")).pack(anchor="w")
+        ctk.CTkLabel(body, textvariable=variable, text_color=TEXT_MAIN, font=("Segoe UI", 18, "bold")).pack(anchor="w", pady=(4, 0))
+        return card
+
     def _build_dashboard(self):
         tab = self._tab("Dashboard")
-        self.summary = tk.Text(tab, height=16, wrap="word")
-        self.summary.pack(fill="both", expand=True)
-        actions = ctk.CTkFrame(tab)
-        actions.pack(fill="x", pady=(10, 0))
-        ctk.CTkButton(actions, text="Start background", command=self.enable_background).pack(side="left", padx=(0, 8))
-        ctk.CTkButton(actions, text="Stop background", command=self.disable_background).pack(side="left", padx=(0, 8))
-        ctk.CTkButton(actions, text="Refresh", command=self.refresh_all).pack(side="left")
+        header = ctk.CTkFrame(tab, fg_color="transparent")
+        header.pack(fill="x", pady=(4, 12))
+        ctk.CTkLabel(header, text="Control Center", font=("Segoe UI", 22, "bold"), text_color=TEXT_MAIN).pack(side="left")
+        self._button(header, "Refresh", self.refresh_all, "muted", width=110).pack(side="right")
+
+        metrics = ctk.CTkFrame(tab, fg_color="transparent")
+        metrics.pack(fill="x", pady=(0, 12))
+        for column in range(4):
+            metrics.columnconfigure(column, weight=1, uniform="metrics")
+        cards = (
+            self._metric_card(metrics, "Lock Engine", self.background_metric_var, SUCCESS),
+            self._metric_card(metrics, "Startup", self.startup_metric_var, ACCENT),
+            self._metric_card(metrics, "Website Hosts", self.hosts_metric_var, WARNING),
+            self._metric_card(metrics, "Rules", self.rules_metric_var, "#7C3AED"),
+        )
+        for column, card in enumerate(cards):
+            card.grid(row=0, column=column, sticky="nsew", padx=(0 if column == 0 else 6, 0 if column == 3 else 6))
+
+        summary_card = self._card(tab, fill="both", expand=True)
+        ctk.CTkLabel(summary_card, text="System Snapshot", font=("Segoe UI", 15, "bold"), text_color=TEXT_MAIN).pack(anchor="w", padx=14, pady=(12, 6))
+        self.summary = tk.Text(
+            summary_card,
+            height=16,
+            wrap="word",
+            bd=0,
+            highlightthickness=0,
+            padx=12,
+            pady=10,
+            font=("Cascadia Mono", 10),
+        )
+        self.summary.pack(fill="both", expand=True, padx=12, pady=(0, 12))
+        actions = ctk.CTkFrame(tab, fg_color="transparent")
+        actions.pack(fill="x", pady=(12, 0))
+        self._button(actions, "Start background", self.enable_background, "success").pack(side="left", padx=(0, 8))
+        self._button(actions, "Stop background", self.disable_background, "danger").pack(side="left", padx=(0, 8))
+        self._button(actions, "Open app data", self.show_appdata, "muted").pack(side="left")
 
     def _build_focus(self):
         tab = self._tab("Focus")
 
-        presets = ctk.CTkFrame(tab)
-        presets.pack(fill="x")
+        presets = self._card(tab, fill="x", pady=(4, 0))
         self.preset_choice = ttk.Combobox(presets, values=tuple(focus_manager.PRESETS.keys()), state="readonly")
         self.preset_choice.set("Deep Work")
-        self.preset_choice.pack(side="left", fill="x", expand=True, padx=(0, 8))
-        ctk.CTkButton(presets, text="Apply preset", command=self.apply_preset).pack(side="left")
+        self.preset_choice.pack(side="left", fill="x", expand=True, padx=12, pady=12)
+        self._button(presets, "Apply preset", self.apply_preset).pack(side="left", padx=(0, 12), pady=12)
 
-        session = ctk.CTkFrame(tab)
-        session.pack(fill="x", pady=(12, 0))
+        session = self._card(tab, fill="x", pady=(12, 0))
         self.focus_minutes = ttk.Spinbox(session, from_=1, to=480, width=8)
         self.focus_minutes.set("90")
+        ctk.CTkLabel(session, text="Minutes", text_color=TEXT_MUTED).pack(side="left", padx=(12, 8), pady=12)
         self.focus_minutes.pack(side="left", padx=(0, 8))
-        ctk.CTkButton(session, text="Start session", command=self.start_focus_session).pack(side="left", padx=(0, 8))
-        ctk.CTkButton(session, text="Stop session", command=self.stop_focus_session).pack(side="left")
+        self._button(session, "Start session", self.start_focus_session, "success").pack(side="left", padx=(0, 8), pady=12)
+        self._button(session, "Stop session", self.stop_focus_session, "danger").pack(side="left", pady=12)
 
-        schedule_mode = ctk.CTkFrame(tab)
+        schedule_mode = ctk.CTkFrame(tab, fg_color="transparent")
         schedule_mode.pack(fill="x", pady=(12, 0))
         self.schedule_only_var = ctk.BooleanVar()
         ctk.CTkCheckBox(
@@ -202,61 +317,60 @@ class WindslockApp(ctk.CTk):
             command=self.save_schedule_only_mode,
         ).pack(anchor="w")
 
-        form = ctk.CTkFrame(tab)
-        form.pack(fill="x", pady=(12, 0))
-        self.schedule_name = ctk.CTkEntry(form, width=180)
+        form = self._card(tab, fill="x", pady=(12, 0))
+        self.schedule_name = ctk.CTkEntry(form, width=180, height=34)
         self.schedule_name.insert(0, "Work")
-        self.schedule_name.grid(row=0, column=0, padx=(0, 8))
-        self.schedule_start = ctk.CTkEntry(form, width=80)
+        self.schedule_name.grid(row=0, column=0, padx=(12, 8), pady=(12, 0))
+        self.schedule_start = ctk.CTkEntry(form, width=80, height=34)
         self.schedule_start.insert(0, "09:00")
-        self.schedule_start.grid(row=0, column=1, padx=(0, 8))
-        self.schedule_end = ctk.CTkEntry(form, width=80)
+        self.schedule_start.grid(row=0, column=1, padx=(0, 8), pady=(12, 0))
+        self.schedule_end = ctk.CTkEntry(form, width=80, height=34)
         self.schedule_end.insert(0, "17:00")
-        self.schedule_end.grid(row=0, column=2, padx=(0, 8))
+        self.schedule_end.grid(row=0, column=2, padx=(0, 8), pady=(12, 0))
         self.day_vars = []
         days = ("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-        days_frame = ctk.CTkFrame(form)
-        days_frame.grid(row=1, column=0, columnspan=4, sticky="w", pady=(8, 0))
+        days_frame = ctk.CTkFrame(form, fg_color="transparent")
+        days_frame.grid(row=1, column=0, columnspan=4, sticky="w", padx=12, pady=(8, 12))
         for index, label in enumerate(days):
             var = ctk.BooleanVar(value=index < 5)
             self.day_vars.append(var)
             ctk.CTkCheckBox(days_frame, text=label, variable=var).pack(side="left", padx=(0, 6))
-        ctk.CTkButton(form, text="Add schedule", command=self.add_schedule).grid(row=0, column=3)
+        self._button(form, "Add schedule", self.add_schedule, width=130).grid(row=0, column=3, padx=(0, 12), pady=(12, 0))
 
         self.schedule_tree = ttk.Treeview(tab, columns=("name", "days", "start", "end"), show="headings", height=7)
         for name, width in (("name", 160), ("days", 260), ("start", 90), ("end", 90)):
             self.schedule_tree.heading(name, text=name.title())
             self.schedule_tree.column(name, width=width)
         self.schedule_tree.pack(fill="both", expand=True, pady=12)
-        ctk.CTkButton(tab, text="Remove selected schedule", command=self.remove_schedule).pack(anchor="e")
+        self._button(tab, "Remove selected schedule", self.remove_schedule, "danger", width=190).pack(anchor="e")
 
     def _build_apps(self):
         tab = self._tab("Apps")
-        status = ctk.CTkFrame(tab, border_width=1)
+        status = ctk.CTkFrame(tab, fg_color=PANEL_BG, border_color=BORDER, border_width=1, corner_radius=12)
         status.pack(fill="x", pady=(0, 10), padx=4)
         ctk.CTkLabel(status, textvariable=self.app_lock_status_var, anchor="w").pack(side="left", fill="x", expand=True, padx=12, pady=10)
-        ctk.CTkButton(status, text="Start lock engine", command=self.enable_background).pack(side="right", padx=12, pady=10)
+        self._button(status, "Start lock engine", self.enable_background, "success").pack(side="right", padx=12, pady=10)
 
-        form = ctk.CTkFrame(tab)
+        form = ctk.CTkFrame(tab, fg_color="transparent")
         form.pack(fill="x")
-        self.app_entry = ctk.CTkEntry(form)
+        self.app_entry = ctk.CTkEntry(form, height=36, placeholder_text="App name or full executable path")
         self.app_entry.pack(side="left", fill="x", expand=True, padx=(0, 8))
-        ctk.CTkButton(form, text="Browse", command=self.pick_app).pack(side="left", padx=(0, 8))
-        ctk.CTkButton(form, text="Running apps", command=self.choose_running_app).pack(side="left", padx=(0, 8))
-        ctk.CTkButton(form, text="Add", command=self.add_app).pack(side="left")
+        self._button(form, "Browse", self.pick_app, "muted", width=100).pack(side="left", padx=(0, 8))
+        self._button(form, "Running apps", self.choose_running_app, "muted", width=130).pack(side="left", padx=(0, 8))
+        self._button(form, "Add lock", self.add_app, "primary", width=110).pack(side="left")
 
         self.apps_tree = ttk.Treeview(tab, columns=("mode", "value"), show="headings", height=14)
         self.apps_tree.heading("mode", text="Mode")
         self.apps_tree.heading("value", text="Name or path")
         self.apps_tree.column("mode", width=90, stretch=False)
         self.apps_tree.pack(fill="both", expand=True, pady=10)
-        app_buttons = ctk.CTkFrame(tab)
+        app_buttons = ctk.CTkFrame(tab, fg_color="transparent")
         app_buttons.pack(fill="x")
-        ctk.CTkButton(app_buttons, text="Test selected", command=self.test_selected_app_rule).pack(side="left")
-        ctk.CTkButton(app_buttons, text="Password unlock selected", command=self.password_unlock_selected_app).pack(side="left", padx=(8, 0))
-        ctk.CTkButton(app_buttons, text="Remove selected", command=self.remove_app).pack(side="right")
+        self._button(app_buttons, "Test selected", self.test_selected_app_rule, "muted", width=130).pack(side="left")
+        self._button(app_buttons, "Password unlock", self.password_unlock_selected_app, "primary", width=150).pack(side="left", padx=(8, 0))
+        self._button(app_buttons, "Remove selected", self.remove_app, "danger", width=150).pack(side="right")
 
-        options = ctk.CTkFrame(tab)
+        options = ctk.CTkFrame(tab, fg_color="transparent")
         options.pack(fill="x", pady=(8, 0))
         self.strict_app_lock_var = ctk.BooleanVar(value=True)
         ctk.CTkCheckBox(
@@ -268,51 +382,61 @@ class WindslockApp(ctk.CTk):
 
     def _build_sites(self):
         tab = self._tab("Websites")
-        status = ctk.CTkFrame(tab, border_width=1)
+        status = ctk.CTkFrame(tab, fg_color=PANEL_BG, border_color=BORDER, border_width=1, corner_radius=12)
         status.pack(fill="x", pady=(0, 10), padx=4)
         ctk.CTkLabel(status, textvariable=self.site_lock_status_var, anchor="w").pack(side="left", fill="x", expand=True, padx=12, pady=10)
-        ctk.CTkButton(status, text="Check", command=self.check_website_block).pack(side="right", padx=(0, 12), pady=10)
-        ctk.CTkLabel(tab, text="Whole-domain blocks use the Windows hosts file.").pack(anchor="w")
-        form = ctk.CTkFrame(tab)
+        self._button(status, "Check", self.check_website_block, "muted", width=100).pack(side="right", padx=(0, 12), pady=10)
+        ctk.CTkLabel(tab, text="Domain blocks", font=("Segoe UI", 14, "bold"), text_color=TEXT_MAIN).pack(anchor="w")
+        form = ctk.CTkFrame(tab, fg_color="transparent")
         form.pack(fill="x", pady=(6, 0))
-        self.site_entry = ctk.CTkEntry(form)
+        self.site_entry = ctk.CTkEntry(form, height=36, placeholder_text="example.com")
         self.site_entry.pack(side="left", fill="x", expand=True, padx=(0, 8))
-        ctk.CTkButton(form, text="Add domain", command=self.add_site).pack(side="left")
+        self._button(form, "Add domain", self.add_site, width=120).pack(side="left")
 
-        self.sites_list = tk.Listbox(tab, height=14)
+        self.sites_list = tk.Listbox(
+            tab,
+            height=14,
+            bd=0,
+            highlightthickness=1,
+            highlightbackground="#D8DEE9",
+            activestyle="none",
+            font=("Segoe UI", 10),
+            selectbackground="#DBEAFE",
+            selectforeground="#0F172A",
+        )
         self.sites_list.pack(fill="both", expand=True, pady=10)
-        buttons = ctk.CTkFrame(tab)
+        buttons = ctk.CTkFrame(tab, fg_color="transparent")
         buttons.pack(fill="x")
-        ctk.CTkButton(buttons, text="Remove selected", command=self.remove_site).pack(side="left")
-        ctk.CTkButton(buttons, text="Apply + flush DNS", command=self.apply_hosts).pack(side="right")
-        ctk.CTkButton(buttons, text="Rollback hosts entries", command=self.rollback_hosts).pack(side="right", padx=(0, 8))
+        self._button(buttons, "Remove selected", self.remove_site, "danger", width=150).pack(side="left")
+        self._button(buttons, "Apply + flush DNS", self.apply_hosts, "success", width=160).pack(side="right")
+        self._button(buttons, "Rollback hosts", self.rollback_hosts, "muted", width=140).pack(side="right", padx=(0, 8))
 
         ttk.Separator(tab).pack(fill="x", pady=12)
-        ctk.CTkLabel(tab, text="Path-level blocks require the local mitmproxy addon.").pack(anchor="w")
-        path_form = ctk.CTkFrame(tab)
+        ctk.CTkLabel(tab, text="URL path blocks", font=("Segoe UI", 14, "bold"), text_color=TEXT_MAIN).pack(anchor="w")
+        path_form = ctk.CTkFrame(tab, fg_color="transparent")
         path_form.pack(fill="x", pady=(6, 0))
-        self.path_domain_entry = ctk.CTkEntry(path_form, width=280)
+        self.path_domain_entry = ctk.CTkEntry(path_form, width=280, height=36)
         self.path_domain_entry.pack(side="left", padx=(0, 8))
         self.path_domain_entry.insert(0, "youtube.com")
-        self.path_prefix_entry = ctk.CTkEntry(path_form, width=240)
+        self.path_prefix_entry = ctk.CTkEntry(path_form, width=240, height=36)
         self.path_prefix_entry.pack(side="left", padx=(0, 8))
         self.path_prefix_entry.insert(0, "/shorts")
-        ctk.CTkButton(path_form, text="Add path rule", command=self.add_path_rule).pack(side="left")
+        self._button(path_form, "Add path rule", self.add_path_rule, width=130).pack(side="left")
 
         self.path_tree = ttk.Treeview(tab, columns=("domain", "path"), show="headings", height=6)
         self.path_tree.heading("domain", text="Domain")
         self.path_tree.heading("path", text="Blocked path")
         self.path_tree.pack(fill="both", expand=True, pady=10)
-        path_buttons = ctk.CTkFrame(tab)
+        path_buttons = ctk.CTkFrame(tab, fg_color="transparent")
         path_buttons.pack(fill="x")
-        ctk.CTkButton(path_buttons, text="Remove selected path", command=self.remove_path_rule).pack(side="left")
+        self._button(path_buttons, "Remove selected path", self.remove_path_rule, "danger", width=180).pack(side="left")
 
     def _build_folders(self):
         tab = self._tab("Folders")
-        buttons = ctk.CTkFrame(tab)
+        buttons = ctk.CTkFrame(tab, fg_color="transparent")
         buttons.pack(fill="x", pady=(0, 10))
-        ctk.CTkButton(buttons, text="Lock folder", command=self.lock_folder).pack(side="left", padx=(0, 8))
-        ctk.CTkButton(buttons, text="Unlock .locked file", command=self.unlock_folder).pack(side="left")
+        self._button(buttons, "Lock folder", self.lock_folder, "primary", width=130).pack(side="left", padx=(0, 8))
+        self._button(buttons, "Unlock file", self.unlock_folder, "success", width=130).pack(side="left")
         self.folders_tree = ttk.Treeview(tab, columns=("original", "locked"), show="headings", height=14)
         self.folders_tree.heading("original", text="Original folder")
         self.folders_tree.heading("locked", text="Locked file")
@@ -320,30 +444,29 @@ class WindslockApp(ctk.CTk):
 
     def _build_overrides(self):
         tab = self._tab("Overrides")
-        settings = ctk.CTkFrame(tab)
-        settings.pack(fill="x")
-        ctk.CTkLabel(settings).grid(row=0, column=0, sticky="w")
-        self.override_phrase = ctk.CTkEntry(settings)
+        settings = self._card(tab, fill="x")
+        ctk.CTkLabel(settings, text="Commitment phrase", text_color=TEXT_MUTED).grid(row=0, column=0, sticky="w", padx=(12, 0), pady=6)
+        self.override_phrase = ctk.CTkEntry(settings, height=34)
         self.override_phrase.grid(row=0, column=1, sticky="ew", padx=(8, 0), pady=3)
-        ctk.CTkLabel(settings, text="Cooldown minutes").grid(row=1, column=0, sticky="w")
+        ctk.CTkLabel(settings, text="Cooldown minutes", text_color=TEXT_MUTED).grid(row=1, column=0, sticky="w", padx=(12, 0), pady=6)
         self.override_cooldown = ttk.Spinbox(settings, from_=0, to=240, width=8)
         self.override_cooldown.grid(row=1, column=1, sticky="w", padx=(8, 0), pady=3)
-        ctk.CTkLabel(settings, text="Unlock window minutes").grid(row=2, column=0, sticky="w")
+        ctk.CTkLabel(settings, text="Unlock window minutes", text_color=TEXT_MUTED).grid(row=2, column=0, sticky="w", padx=(12, 0), pady=6)
         self.override_window = ttk.Spinbox(settings, from_=1, to=240, width=8)
         self.override_window.grid(row=2, column=1, sticky="w", padx=(8, 0), pady=3)
         settings.columnconfigure(1, weight=1)
-        ctk.CTkButton(settings, text="Save override settings", command=self.save_override_settings).grid(row=3, column=1, sticky="e", pady=(8, 0))
+        self._button(settings, "Save settings", self.save_override_settings, width=140).grid(row=3, column=1, sticky="e", padx=(0, 12), pady=(8, 12))
 
-        request = ctk.CTkFrame(tab)
+        request = ctk.CTkFrame(tab, fg_color="transparent")
         request.pack(fill="x", pady=(12, 0))
         self.override_type = ttk.Combobox(request, values=("app", "site", "url_path", "folder"), state="readonly", width=12)
         self.override_type.set("app")
         self.override_type.grid(row=0, column=0, padx=(0, 8))
-        self.override_target = ctk.CTkEntry(request)
+        self.override_target = ctk.CTkEntry(request, height=34, placeholder_text="Target")
         self.override_target.grid(row=0, column=1, sticky="ew", padx=(0, 8))
-        self.override_phrase_attempt = ctk.CTkEntry(request)
+        self.override_phrase_attempt = ctk.CTkEntry(request, height=34, placeholder_text="Commitment phrase")
         self.override_phrase_attempt.grid(row=0, column=2, sticky="ew", padx=(0, 8))
-        ctk.CTkButton(request, text="Request", command=self.request_override).grid(row=0, column=3)
+        self._button(request, "Request", self.request_override, width=110).grid(row=0, column=3)
         request.columnconfigure(1, weight=1)
         request.columnconfigure(2, weight=1)
 
@@ -352,7 +475,7 @@ class WindslockApp(ctk.CTk):
             self.override_tree.heading(name, text=name.title())
             self.override_tree.column(name, width=width)
         self.override_tree.pack(fill="both", expand=True, pady=12)
-        ctk.CTkButton(tab, text="Refresh", command=self.refresh_overrides).pack(anchor="e")
+        self._button(tab, "Refresh", self.refresh_overrides, "muted", width=110).pack(anchor="e")
 
     def _build_history(self):
         tab = self._tab("History")
@@ -361,18 +484,22 @@ class WindslockApp(ctk.CTk):
             self.history_tree.heading(name, text=name.title())
             self.history_tree.column(name, width=width)
         self.history_tree.pack(fill="both", expand=True)
-        ctk.CTkButton(tab, text="Refresh", command=self.refresh_history).pack(anchor="e", pady=(10, 0))
+        self._button(tab, "Refresh", self.refresh_history, "muted", width=110).pack(anchor="e", pady=(10, 0))
 
     def _build_settings(self):
         tab = self._tab("Settings")
-        ctk.CTkButton(tab, text="Enable start with Windows", command=self.enable_startup).pack(anchor="w", pady=4)
-        ctk.CTkButton(tab, text="Disable start with Windows", command=self.disable_startup).pack(anchor="w", pady=4)
-        ctk.CTkButton(tab, text="Install pro startup task", command=self.install_startup_task).pack(anchor="w", pady=4)
-        ctk.CTkButton(tab, text="Remove pro startup task", command=self.remove_startup_task).pack(anchor="w", pady=4)
-        ctk.CTkButton(tab, text="Harden config folder ACL", command=self.harden_acl).pack(anchor="w", pady=4)
-        ctk.CTkButton(tab, text="Change master password", command=self.change_password).pack(anchor="w", pady=4)
-        ctk.CTkButton(tab, text="Show app data folder", command=self.show_appdata).pack(anchor="w", pady=4)
-        ctk.CTkButton(tab, text="Exit app", command=self.destroy).pack(anchor="w", pady=(18, 4))
+        panel = self._card(tab, fill="x", pady=(4, 0))
+        for text, command, variant in (
+            ("Enable start with Windows", self.enable_startup, "success"),
+            ("Disable start with Windows", self.disable_startup, "muted"),
+            ("Install pro startup task", self.install_startup_task, "primary"),
+            ("Remove pro startup task", self.remove_startup_task, "danger"),
+            ("Harden config folder ACL", self.harden_acl, "primary"),
+            ("Change master password", self.change_password, "primary"),
+            ("Show app data folder", self.show_appdata, "muted"),
+        ):
+            self._button(panel, text, command, variant, width=220).pack(anchor="w", padx=12, pady=5)
+        self._button(tab, "Close UI", self.destroy, "muted", width=120).pack(anchor="w", pady=(18, 4))
 
     def refresh_all(self):
         self.refresh_status(schedule=False)
@@ -394,6 +521,16 @@ class WindslockApp(ctk.CTk):
             f"Startup: {'on' if config['settings'].get('run_on_startup') else 'off'} | "
             f"Hosts: {'applied' if config['settings'].get('website_hosts_applied') else 'not applied'}"
         )
+        total_rules = (
+            len(config.get("locked_apps", []))
+            + len(config.get("blocked_sites", []))
+            + len(config.get("blocked_url_paths", []))
+            + len(config.get("locked_folders", []))
+        )
+        self.background_metric_var.set("Running" if running else "Stopped")
+        self.startup_metric_var.set("On" if config["settings"].get("run_on_startup") else "Off")
+        self.hosts_metric_var.set("Applied" if config["settings"].get("website_hosts_applied") else "Not applied")
+        self.rules_metric_var.set(str(total_rules))
         self._refresh_app_lock_status(config, running, enforce_now)
         self._refresh_site_lock_status(config)
         if schedule:
@@ -434,26 +571,28 @@ class WindslockApp(ctk.CTk):
     def refresh_summary(self):
         config = self._load()
         lines = [
-            "Status",
-            f"  Background enforcement: {'running' if runtime_control.is_enforcer_running() else 'stopped'}",
-            f"  Start with Windows: {'enabled' if config['settings'].get('run_on_startup') else 'disabled'}",
-            f"  Website hosts block: {'applied' if config['settings'].get('website_hosts_applied') else 'not applied'}",
-            f"  Schedule-only mode: {'enabled' if config['settings'].get('schedule_only_mode') else 'disabled'}",
-            f"  Focus session until: {config['settings'].get('focus_session_until') or 'not active'}",
+            "STATUS",
+            f"  Lock engine        {'running' if runtime_control.is_enforcer_running() else 'stopped'}",
+            f"  Start with Windows {'enabled' if config['settings'].get('run_on_startup') else 'disabled'}",
+            f"  Website hosts      {'applied' if config['settings'].get('website_hosts_applied') else 'not applied'}",
+            f"  Schedule mode      {'enabled' if config['settings'].get('schedule_only_mode') else 'disabled'}",
+            f"  Focus session      {config['settings'].get('focus_session_until') or 'not active'}",
             "",
-            "Rules",
-            f"  App locks: {len(config['locked_apps'])}",
-            f"  Website blocks: {len(config['blocked_sites'])}",
-            f"  Path-level web blocks: {len(config['blocked_url_paths'])}",
-            f"  Locked folders: {len(config['locked_folders'])}",
-            f"  Override requests: {len(config['override_requests'])}",
-            f"  Focus schedules: {len(config['focus_schedules'])}",
+            "RULES",
+            f"  App locks          {len(config['locked_apps'])}",
+            f"  Website domains    {len(config['blocked_sites'])}",
+            f"  URL path rules     {len(config['blocked_url_paths'])}",
+            f"  Locked folders     {len(config['locked_folders'])}",
+            f"  Override records   {len(config['override_requests'])}",
+            f"  Focus schedules    {len(config['focus_schedules'])}",
             "",
-            "Security note",
-            "  Windslock protects against casual use and accidental bypass.",
-            "  A Windows administrator can still stop or modify user-level enforcement.",
+            "SECURITY",
+            "  Passwords are not stored in plain text.",
+            "  The local config is encrypted.",
+            "  A Windows administrator can still bypass user-level controls.",
         ]
         self.summary.configure(state="normal")
+        self.summary.configure(bg="#FFFFFF", fg="#0F172A", insertbackground="#0F172A")
         self.summary.delete("1.0", "end")
         self.summary.insert("1.0", "\n".join(lines))
         self.summary.configure(state="disabled")

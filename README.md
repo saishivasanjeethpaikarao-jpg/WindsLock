@@ -9,7 +9,7 @@ startup tooling.
 
 ## Features
 
-- **Modern Premium UI**: Sleek dark/light mode interface built with CustomTkinter.
+- **Premium desktop UI**: Branded control-center layout with status cards, focused tabs, polished actions, and clearer diagnostics.
 - **Cross-Platform Security**: Background enforcement and tamper-proof DB storage using Windows DPAPI or Linux Keyring.
 - **Application Locking**: Block desktop apps dynamically by process name or full path.
 - **Strict app lock mode**: By default, matched apps are stopped immediately. You can switch to detect/log mode from the Apps tab.
@@ -17,6 +17,28 @@ startup tooling.
 - **Path-level Website Blocking**: Powered by a robust MITM proxy, restrict access to specific paths (e.g., `youtube.com/shorts`) without blocking the whole domain.
 - **Folder Encryption**: AES-level encryption secures local folders from prying eyes.
 - **Robust Database**: Features a zero-leakage `EncryptedDatabase` architecture leveraging Fernet encryption for full DB security.
+
+## What Windslock Can Do
+
+| Area | What works now | Important limit |
+| --- | --- | --- |
+| App locking | Locks by `.exe` name or full executable path. Strict mode stops matching apps immediately. | User-level enforcement can be stopped by a Windows administrator. |
+| Website blocking | Blocks whole domains through reversible Windows hosts-file entries. | Requires administrator rights to edit the real hosts file. Browser Secure DNS can bypass or confuse testing. |
+| URL path blocking | Blocks paths like `/shorts` or `/reels` through the mitmproxy addon. | HTTPS path inspection requires a one-time local certificate install and browser proxy setup. |
+| Folder locking | Encrypts a folder into a `.locked` file and restores it during unlock. | Keep backups; losing both password and recovery codes can make encrypted folders unrecoverable. |
+| Unlock/recovery | Supports master password, emergency recovery codes, timed phrase overrides, and password unlock for selected apps. | Recovery codes must be saved outside the app folder. |
+| Background mode | Keeps app enforcement active after the UI is closed. | A true enterprise-grade service would require a signed Windows service and installer flow. |
+
+## App Tour
+
+- **Dashboard**: Shows the lock engine, startup, hosts status, rule count, and a compact system snapshot.
+- **Focus**: Applies preset rule sets, starts timed focus sessions, and manages weekly schedules.
+- **Apps**: Adds app rules, picks from running processes, tests selected rules, toggles strict mode, and password-unlocks a selected app.
+- **Websites**: Adds domain blocks, applies or rolls back hosts entries, checks Windows permission/status, and manages URL path rules.
+- **Folders**: Locks folders into encrypted `.locked` files and unlocks them when needed.
+- **Overrides**: Manages the commitment phrase, cooldown timer, unlock window, and override request history.
+- **History**: Shows recent blocked attempts, override actions, hosts events, and security changes.
+- **Settings**: Manages startup, scheduled task startup, config ACL hardening, password changes, and app data access.
 
 ## Documentation
 
@@ -45,6 +67,21 @@ If a Windows EXE says it cannot load `python312.dll`, see the
 section.
 
 ## Setup
+
+### Recommended Windows Install
+
+1. Download `Windslock-Setup.exe` from the latest release.
+2. Install and open Windslock.
+3. Create a master password.
+4. Save the emergency recovery codes outside the app folder.
+5. Open **Apps**, add a harmless test app such as `notepad.exe`, and keep **Stop locked apps immediately** enabled.
+6. Press **Start lock engine** or **Start background**.
+7. Open Notepad to confirm it is closed by Windslock.
+
+For website blocking, run Windslock as administrator before pressing
+**Apply + flush DNS** in the Websites tab.
+
+### Source Setup
 
 Install Python 3.11+ and dependencies:
 
@@ -154,6 +191,25 @@ Common actions:
 - Enable background enforcement after signing in.
 - Enable start with Windows if you want the enforcer to start on login.
 - Use the history option to review recent blocked attempts.
+
+## App Locking Details
+
+App locks are stored as normalized rules:
+
+- `name`: process name such as `codex.exe`, `notepad.exe`, or `chrome.exe`.
+- `path`: full executable path such as `C:\Program Files\App\App.exe`.
+
+Strict mode is enabled by default. When the background lock engine sees a
+matching process, it stops it and records the attempt in History. Detect/log mode
+is available for testing, but it does not block the app.
+
+For the most reliable app locks:
+
+1. Use **Running apps** to select the exact process.
+2. Keep **Stop locked apps immediately** checked.
+3. Press **Start lock engine** after adding rules.
+4. Use **Test selected** to confirm the rule matches a running process.
+5. Enable **Start with Windows** or install the pro startup task for login startup.
 
 ## Website Blocking And Rollback
 
