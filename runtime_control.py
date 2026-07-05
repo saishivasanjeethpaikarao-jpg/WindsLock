@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 import subprocess
 import sys
+import time
 
 import app_blocker
 import config as cfg
@@ -50,15 +51,42 @@ def is_enforcer_running() -> bool:
     pid = read_enforcer_pid()
     if not pid or app_blocker.psutil is None:
         return False
-    return app_blocker.psutil.pid_exists(pid)
+    try:
+        proc = app_blocker.psutil.Process(pid)
+        name = (proc.name() or "").lower()
+        cmdline = " ".join(proc.cmdline()).lower()
+    except app_blocker.psutil.Error:
+        _clear_stale_lock()
+        return False
+    looks_like_enforcer = (
+        "windslockenforcer" in name
+        or "windslockenforcer" in cmdline
+        or "enforcer.py" in cmdline
+    )
+    if not looks_like_enforcer:
+        _clear_stale_lock()
+        return False
+    return proc.is_running()
 
 
 def start_enforcer() -> None:
+    if is_enforcer_running():
+        return
     packaged_enforcer = _packaged_executable("WindslockEnforcer")
     if packaged_enforcer:
         subprocess.Popen([str(packaged_enforcer)], close_fds=True)
         return
     subprocess.Popen([str(pythonw_executable()), str(enforcer_script())], close_fds=True)
+
+
+def start_enforcer_and_wait(timeout: float = 4.0) -> bool:
+    start_enforcer()
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if is_enforcer_running():
+            return True
+        time.sleep(0.2)
+    return is_enforcer_running()
 
 
 def open_gui() -> None:
@@ -97,6 +125,13 @@ def _packaged_executable(app_name: str) -> Path | None:
         if candidate.exists():
             return candidate
     return None
+
+
+def _clear_stale_lock() -> None:
+    try:
+        enforcer_lock_path().unlink(missing_ok=True)
+    except OSError:
+        pass
 
 
 def stop_enforcer() -> bool:

@@ -85,6 +85,69 @@ class RuleTests(unittest.TestCase):
         self.assertTrue(saved["settings"]["strict_app_lock"])
         self.assertEqual(10, saved["settings"]["password_unlock_minutes"])
 
+    def test_watch_once_kills_when_strict_mode_is_on(self):
+        fake_proc = _FakeProcess("codex.exe")
+        original_psutil = app_blocker.psutil
+        app_blocker.psutil = _FakePsutil([fake_proc])
+        try:
+            events = app_blocker.watch_once(
+                [{"mode": "name", "value": "codex.exe"}],
+                {"settings": {"strict_app_lock": True}, "override_requests": []},
+            )
+        finally:
+            app_blocker.psutil = original_psutil
+
+        self.assertTrue(fake_proc.killed)
+        self.assertEqual("killed", events[0]["action"])
+
+    def test_watch_once_detects_without_kill_when_strict_mode_is_off(self):
+        fake_proc = _FakeProcess("codex.exe")
+        original_psutil = app_blocker.psutil
+        app_blocker.psutil = _FakePsutil([fake_proc])
+        try:
+            events = app_blocker.watch_once(
+                [{"mode": "name", "value": "codex.exe"}],
+                {"settings": {"strict_app_lock": False}, "override_requests": []},
+            )
+        finally:
+            app_blocker.psutil = original_psutil
+
+        self.assertFalse(fake_proc.killed)
+        self.assertEqual("detected", events[0]["action"])
+
+
+class _FakeProcess:
+    def __init__(self, name: str):
+        self.pid = 1234
+        self.killed = False
+        self.info = {"pid": self.pid, "name": name, "exe": ""}
+
+    def name(self):
+        return self.info["name"]
+
+    def kill(self):
+        self.killed = True
+
+
+class _FakePsutil:
+    class Error(Exception):
+        pass
+
+    class NoSuchProcess(Error):
+        pass
+
+    class AccessDenied(Error):
+        pass
+
+    class ZombieProcess(Error):
+        pass
+
+    def __init__(self, processes):
+        self._processes = processes
+
+    def process_iter(self, _attrs):
+        return iter(self._processes)
+
 
 if __name__ == "__main__":
     unittest.main()

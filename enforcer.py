@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 import time
+import traceback
 
 import app_blocker
 import audit_log
@@ -28,7 +29,7 @@ def _acquire_single_instance() -> bool:
     if path.exists():
         try:
             pid = int(path.read_text(encoding="utf-8").strip())
-            if pid and _pid_exists(pid):
+            if pid and _pid_is_running_enforcer(pid):
                 return False
         except Exception:
             pass
@@ -40,6 +41,33 @@ def _pid_exists(pid: int) -> bool:
     if app_blocker.psutil is None:
         return False
     return app_blocker.psutil.pid_exists(pid)
+
+
+def _pid_is_running_enforcer(pid: int) -> bool:
+    if app_blocker.psutil is None:
+        return False
+    try:
+        proc = app_blocker.psutil.Process(pid)
+        name = (proc.name() or "").lower()
+        cmdline = " ".join(proc.cmdline()).lower()
+    except app_blocker.psutil.Error:
+        return False
+    return (
+        proc.is_running()
+        and (
+            "windslockenforcer" in name
+            or "windslockenforcer" in cmdline
+            or "enforcer.py" in cmdline
+        )
+    )
+
+
+def _write_crash_log(exc: BaseException) -> None:
+    try:
+        path = cfg.ensure_app_dir() / "enforcer_error.log"
+        path.write_text("Windslock enforcer crashed:\n" + "".join(traceback.format_exception(exc)), encoding="utf-8")
+    except Exception:
+        pass
 
 
 def run_forever(poll_interval: float = POLL_INTERVAL_SECONDS) -> None:
@@ -85,4 +113,8 @@ def run_forever(poll_interval: float = POLL_INTERVAL_SECONDS) -> None:
 
 
 if __name__ == "__main__":
-    run_forever()
+    try:
+        run_forever()
+    except Exception as exc:
+        _write_crash_log(exc)
+        raise

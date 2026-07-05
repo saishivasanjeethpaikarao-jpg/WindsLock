@@ -607,13 +607,17 @@ class WindslockApp(ctk.CTk):
         notes = []
         if config["settings"].get("schedule_only_mode") and not focus_manager.should_enforce(config):
             notes.append("Rule saved, but schedule-only mode is currently paused.")
+        was_running = runtime_control.is_enforcer_running()
+        cfg.enable_background_unlock(self.password)
         if not config["settings"].get("background_enabled"):
-            cfg.enable_background_unlock(self.password)
             notes.append("Background unlock enabled.")
-        if not runtime_control.is_enforcer_running():
-            runtime_control.start_enforcer()
+        else:
+            notes.append("Background unlock refreshed.")
+        if not runtime_control.start_enforcer_and_wait():
+            raise RuntimeError("Lock engine did not stay running. Open Settings, enable background again, then try once more.")
+        if not was_running:
             notes.append("Lock engine started.")
-        return "App rule added. " + (" ".join(notes) if notes else "Lock engine is already running.")
+        return "App rule added. " + (" ".join(notes) if notes else "Lock engine is running.")
 
     def remove_app(self):
         item = self.apps_tree.focus()
@@ -770,7 +774,11 @@ class WindslockApp(ctk.CTk):
         self.refresh_all()
 
     def enable_background(self):
-        self._run("Enable background", lambda: (cfg.enable_background_unlock(self.password), runtime_control.start_enforcer()))
+        def enable():
+            cfg.enable_background_unlock(self.password)
+            if not runtime_control.start_enforcer_and_wait():
+                raise RuntimeError("Lock engine did not stay running.")
+        self._run("Enable background", enable)
 
     def disable_background(self):
         self._run("Disable background", lambda: (cfg.disable_background_unlock(self.password), runtime_control.stop_enforcer()))
