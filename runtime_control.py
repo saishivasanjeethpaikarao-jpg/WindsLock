@@ -10,6 +10,12 @@ import time
 import app_blocker
 import config as cfg
 
+def _popen_hidden(args: list[str]) -> subprocess.Popen:
+    kwargs = {"close_fds": True}
+    if sys.platform == "win32":
+        kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+    return subprocess.Popen(args, **kwargs)
+
 
 def enforcer_script() -> Path:
     return Path(__file__).with_name("enforcer.py")
@@ -91,11 +97,11 @@ def start_enforcer() -> None:
     _clear_old_error_log()
     packaged_enforcer = _packaged_executable("WindslockEnforcer")
     if packaged_enforcer:
-        subprocess.Popen([str(packaged_enforcer)], close_fds=True)
+        _popen_hidden([str(packaged_enforcer)])
         return
     if getattr(sys, "frozen", False):
         raise RuntimeError("WindslockEnforcer.exe was not found next to the installed app.")
-    subprocess.Popen([str(pythonw_executable()), str(enforcer_script())], close_fds=True)
+    _popen_hidden([str(pythonw_executable()), str(enforcer_script())])
 
 
 def start_enforcer_and_wait(timeout: float = 15.0) -> bool:

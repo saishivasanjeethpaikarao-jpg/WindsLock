@@ -3,12 +3,12 @@ cd /d "%~dp0"
 echo Building Windslock portable executables...
 ".venv\Scripts\pyinstaller.exe" --noconfirm --windowed --icon assets\windslock.ico --add-data "assets;assets" --name Windslock gui.py
 ".venv\Scripts\pyinstaller.exe" --noconfirm --windowed --icon assets\windslock.ico --add-data "assets;assets" --name WindslockTray tray_app.py
-".venv\Scripts\pyinstaller.exe" --noconfirm --console --icon assets\windslock.ico --add-data "assets;assets" --name WindslockEnforcer enforcer.py
+".venv\Scripts\pyinstaller.exe" --noconfirm --windowed --icon assets\windslock.ico --add-data "assets;assets" --name WindslockEnforcer enforcer.py
 ".venv\Scripts\pyinstaller.exe" --noconfirm --console --icon assets\windslock.ico --add-data "assets;assets" --add-data "proxy_addon.py;." --name WindslockProxy proxy_runner.py
 echo Building one-file Windows executables...
 ".venv\Scripts\pyinstaller.exe" --noconfirm --onefile --windowed --icon assets\windslock.ico --add-data "assets;assets" --distpath dist-onefile --name Windslock gui.py
 ".venv\Scripts\pyinstaller.exe" --noconfirm --onefile --windowed --icon assets\windslock.ico --add-data "assets;assets" --distpath dist-onefile --name WindslockTray tray_app.py
-".venv\Scripts\pyinstaller.exe" --noconfirm --onefile --console --icon assets\windslock.ico --add-data "assets;assets" --distpath dist-onefile --name WindslockEnforcer enforcer.py
+".venv\Scripts\pyinstaller.exe" --noconfirm --onefile --windowed --icon assets\windslock.ico --add-data "assets;assets" --distpath dist-onefile --name WindslockEnforcer enforcer.py
 ".venv\Scripts\pyinstaller.exe" --noconfirm --onefile --console --icon assets\windslock.ico --add-data "assets;assets" --add-data "proxy_addon.py;." --distpath dist-onefile --name WindslockProxy proxy_runner.py
 echo.
 echo Build output:

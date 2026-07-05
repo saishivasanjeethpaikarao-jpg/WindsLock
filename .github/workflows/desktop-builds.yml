@@ -36,11 +36,11 @@ jobs:
         run: |
           pyinstaller --noconfirm --windowed --icon assets\windslock.ico --add-data "assets;assets" --name Windslock gui.py
           pyinstaller --noconfirm --windowed --icon assets\windslock.ico --add-data "assets;assets" --name WindslockTray tray_app.py
-          pyinstaller --noconfirm --console --icon assets\windslock.ico --add-data "assets;assets" --name WindslockEnforcer enforcer.py
+          pyinstaller --noconfirm --windowed --icon assets\windslock.ico --add-data "assets;assets" --name WindslockEnforcer enforcer.py
           pyinstaller --noconfirm --console --icon assets\windslock.ico --add-data "assets;assets" --add-data "proxy_addon.py;." --name WindslockProxy proxy_runner.py
           pyinstaller --noconfirm --onefile --windowed --icon assets\windslock.ico --add-data "assets;assets" --distpath dist-onefile --name Windslock gui.py
           pyinstaller --noconfirm --onefile --windowed --icon assets\windslock.ico --add-data "assets;assets" --distpath dist-onefile --name WindslockTray tray_app.py
-          pyinstaller --noconfirm --onefile --console --icon assets\windslock.ico --add-data "assets;assets" --distpath dist-onefile --name WindslockEnforcer enforcer.py
+          pyinstaller --noconfirm --onefile --windowed --icon assets\windslock.ico --add-data "assets;assets" --distpath dist-onefile --name WindslockEnforcer enforcer.py
           pyinstaller --noconfirm --onefile --console --icon assets\windslock.ico --add-data "assets;assets" --add-data "proxy_addon.py;." --distpath dist-onefile --name WindslockProxy proxy_runner.py
 
       - name: Sign Windows EXEs when certificate is configured
