@@ -22,6 +22,13 @@ python -m PyInstaller \
   --noconfirm \
   --console \
   --add-data "assets:assets" \
+  --name WindslockEnforcer \
+  enforcer.py
+
+python -m PyInstaller \
+  --noconfirm \
+  --console \
+  --add-data "assets:assets" \
   --add-data "proxy_addon.py:." \
   --name WindslockProxy \
   proxy_runner.py
@@ -32,6 +39,7 @@ mkdir -p "${PKG_DIR}"
 
 cp -R dist/Windslock "${PKG_DIR}/Windslock"
 cp -R dist/WindslockTray "${PKG_DIR}/WindslockTray"
+cp -R dist/WindslockEnforcer "${PKG_DIR}/WindslockEnforcer"
 cp -R dist/WindslockProxy "${PKG_DIR}/WindslockProxy"
 cp -R assets "${PKG_DIR}/assets"
 cp -R docs "${PKG_DIR}/docs"

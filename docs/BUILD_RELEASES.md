@@ -118,6 +118,35 @@ Linux:
 - `run_proxy.sh` starts path-level proxy blocking.
 - `install_linux_user.sh` installs launchers and desktop entries for the current user.
 
+## Windows Python DLL Error
+
+If Windows shows an error like:
+
+```text
+Failed to load Python DLL
+python312.dll
+```
+
+the app was probably launched without the PyInstaller `_internal` folder. This
+happens when only `Windslock.exe` is copied out of `dist\Windslock`.
+
+Use one of these fixes:
+
+1. Keep and run the full `Windslock-Windows.zip` folder contents together.
+2. Run `dist\Windslock\run_windslock.bat`, not a copied standalone EXE.
+3. Use the one-file artifact: `Windslock-Windows-OneFile.zip`.
+
+The one-file artifact contains:
+
+```text
+Windslock.exe
+WindslockTray.exe
+WindslockEnforcer.exe
+WindslockProxy.exe
+```
+
+Those EXEs do not need a visible `_internal` folder.
+
 ## Signing
 
 Current builds are unsigned.

@@ -27,13 +27,18 @@ cat > "${BIN_DIR}/windslock-tray" <<EOF
 "${APP_DIR}/WindslockTray/WindslockTray" "\$@"
 EOF
 
+cat > "${BIN_DIR}/windslock-enforcer" <<EOF
+#!/usr/bin/env bash
+"${APP_DIR}/WindslockEnforcer/WindslockEnforcer" "\$@"
+EOF
+
 cat > "${BIN_DIR}/windslock-proxy" <<EOF
 #!/usr/bin/env bash
 "${APP_DIR}/WindslockProxy/WindslockProxy" "\$@"
 EOF
 
-chmod +x "${BIN_DIR}/windslock" "${BIN_DIR}/windslock-tray" "${BIN_DIR}/windslock-proxy"
-chmod +x "${APP_DIR}/Windslock/Windslock" "${APP_DIR}/WindslockTray/WindslockTray" "${APP_DIR}/WindslockProxy/WindslockProxy"
+chmod +x "${BIN_DIR}/windslock" "${BIN_DIR}/windslock-tray" "${BIN_DIR}/windslock-enforcer" "${BIN_DIR}/windslock-proxy"
+chmod +x "${APP_DIR}/Windslock/Windslock" "${APP_DIR}/WindslockTray/WindslockTray" "${APP_DIR}/WindslockEnforcer/WindslockEnforcer" "${APP_DIR}/WindslockProxy/WindslockProxy"
 
 if command -v update-desktop-database >/dev/null 2>&1; then
   update-desktop-database "${DESKTOP_DIR}" || true

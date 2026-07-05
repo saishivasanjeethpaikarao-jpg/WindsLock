@@ -54,15 +54,23 @@ def is_enforcer_running() -> bool:
 
 
 def start_enforcer() -> None:
+    packaged_enforcer = _packaged_executable("WindslockEnforcer")
+    if packaged_enforcer:
+        subprocess.Popen([str(packaged_enforcer)], close_fds=True)
+        return
     subprocess.Popen([str(pythonw_executable()), str(enforcer_script())], close_fds=True)
 
 
 def open_gui() -> None:
+    packaged_gui = _packaged_executable("Windslock")
+    if packaged_gui and packaged_gui != Path(sys.executable):
+        subprocess.Popen([str(packaged_gui)], close_fds=True)
+        return
     subprocess.Popen([str(pythonw_executable()), str(gui_script())], close_fds=True)
 
 
 def start_proxy() -> None:
-    packaged_proxy = _packaged_proxy_executable()
+    packaged_proxy = _packaged_executable("WindslockProxy")
     if packaged_proxy:
         subprocess.Popen([str(packaged_proxy)], close_fds=True)
         return
@@ -77,13 +85,14 @@ def start_proxy() -> None:
     )
 
 
-def _packaged_proxy_executable() -> Path | None:
+def _packaged_executable(app_name: str) -> Path | None:
     exe = Path(sys.executable)
-    names = ["WindslockProxy.exe", "WindslockProxy"]
+    names = [f"{app_name}.exe", app_name]
     candidates = []
     for name in names:
         candidates.append(exe.with_name(name))
-        candidates.append(exe.parent.parent / "WindslockProxy" / name)
+        candidates.append(exe.parent.parent / app_name / name)
+        candidates.append(exe.parent / app_name / name)
     for candidate in candidates:
         if candidate.exists():
             return candidate
