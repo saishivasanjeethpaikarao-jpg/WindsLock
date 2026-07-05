@@ -7,6 +7,7 @@ import customtkinter as ctk
 import tkinter as tk
 from tkinter import filedialog, messagebox, simpledialog
 from tkinter import ttk
+from PIL import Image
 
 import app_blocker
 import audit_log
@@ -149,7 +150,7 @@ class WindslockApp(ctk.CTk):
         top = ctk.CTkFrame(root, fg_color=PANEL_BG, border_color=BORDER, border_width=1, corner_radius=14)
         top.pack(fill="x", pady=(0, 14))
         if brand.logo_png().exists():
-            self.logo_image = tk.PhotoImage(file=str(brand.logo_png())).subsample(4, 4)
+            self.logo_image = ctk.CTkImage(Image.open(brand.logo_png()), size=(48, 48))
             ctk.CTkLabel(top, image=self.logo_image, text="").pack(side="left", padx=(16, 12), pady=14)
         title_block = ctk.CTkFrame(top, fg_color="transparent")
         title_block.pack(side="left", pady=14)
