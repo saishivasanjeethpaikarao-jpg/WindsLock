@@ -23,14 +23,24 @@ startup tooling.
 - [Workflows](docs/WORKFLOWS.md)
 - [Windows And Linux Plan](docs/CROSS_PLATFORM_PLAN.md)
 - [Build And Release Guide](docs/BUILD_RELEASES.md)
+- [Code Signing Guide](docs/CODE_SIGNING.md)
 - [Roadmap](docs/ROADMAP.md)
+
+## Downloads
+
+Latest desktop builds are published at the `latest-main` release:
+
+- Windows installer: `Windslock-Setup.exe`
+- Windows portable: `Windslock-Windows-OneFile.zip`
+- Ubuntu, Linux Mint, Kali, Debian: `Windslock-Linux-Debian.deb`
+- Other Linux desktops: `Windslock-Linux.tar.gz`
+
+Release builds include SHA-256 checksums. Windows Authenticode signing and Linux
+GPG signatures are automatic when the repository signing secrets are configured.
 
 If a Windows EXE says it cannot load `python312.dll`, see the
 [Windows Python DLL Error](docs/BUILD_RELEASES.md#windows-python-dll-error)
 section.
-
-For normal laptop use, prefer the `Windslock-Windows-OneFile.zip` artifact. It
-contains standalone EXEs and avoids missing `_internal` / Python DLL issues.
 
 ## Setup
 
