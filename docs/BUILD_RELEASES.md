@@ -15,8 +15,11 @@ Artifacts:
 - `Windslock-Setup.exe`
 - `Windslock-Windows.zip`
 - `Windslock-Windows-OneFile.zip`
+- `Windslock-Windows-SHA256SUMS.txt`
 - `Windslock-Linux.tar.gz`
 - `Windslock-Linux-Debian.deb`
+- `Windslock-Linux-SHA256SUMS.txt`
+- Linux `.asc` signatures when GPG signing is configured
 
 Triggers:
 
@@ -25,8 +28,8 @@ Triggers:
 - Published GitHub release
 
 On a published release, the workflow uploads the Windows installer, Windows
-portable packages, Linux portable package, and Debian-family Linux package to
-the release assets.
+portable packages, Linux portable package, Debian-family Linux package,
+checksums, and optional signatures to the release assets.
 
 Recommended downloads:
 
@@ -34,6 +37,26 @@ Recommended downloads:
 - Windows portable fallback: `Windslock-Windows-OneFile.zip`
 - Ubuntu, Linux Mint, Kali, Debian: `Windslock-Linux-Debian.deb`
 - Other Linux desktops: `Windslock-Linux.tar.gz`
+
+## Code Signing
+
+See [Code Signing Guide](CODE_SIGNING.md) for the full setup.
+
+Windows Authenticode signing is automatic when these GitHub Actions secrets are
+configured:
+
+- `WINDOWS_SIGNING_CERT_BASE64`
+- `WINDOWS_SIGNING_CERT_PASSWORD`
+- `WINDOWS_TIMESTAMP_URL` optional
+
+Linux detached GPG signatures are automatic when these secrets are configured:
+
+- `RELEASE_GPG_PRIVATE_KEY`
+- `RELEASE_GPG_PASSPHRASE`
+
+If signing secrets are missing, the build still succeeds and releases unsigned
+artifacts with SHA-256 checksum files. Signed Windows builds still may show
+SmartScreen warnings until the certificate builds reputation.
 
 ## Windows Local Build
 
@@ -85,6 +108,7 @@ Outputs:
 ```text
 dist/Windslock-Linux.tar.gz
 dist/Windslock-Linux-Debian.deb
+dist/Windslock-Linux-SHA256SUMS.txt
 ```
 
 `Windslock-Linux-Debian.deb` is for Debian-family x64 desktops: Ubuntu, Linux
@@ -125,6 +149,33 @@ Uninstall:
 
 ```bash
 bash packaging/linux/uninstall_linux_user.sh
+```
+
+## Verification
+
+Verify Windows checksums:
+
+```powershell
+Get-FileHash .\Windslock-Setup.exe -Algorithm SHA256
+Get-Content .\Windslock-Windows-SHA256SUMS.txt
+```
+
+Verify Linux checksums:
+
+```bash
+sha256sum -c Windslock-Linux-SHA256SUMS.txt
+```
+
+Verify a Windows signature when signing is configured:
+
+```powershell
+Get-AuthenticodeSignature .\Windslock-Setup.exe
+```
+
+Verify a Linux detached signature when GPG signing is configured:
+
+```bash
+gpg --verify Windslock-Linux-Debian.deb.asc Windslock-Linux-Debian.deb
 ```
 
 ## Runtime Notes
@@ -172,18 +223,23 @@ WindslockProxy.exe
 
 Those EXEs do not need a visible `_internal` folder.
 
-## Signing
+## Release Hardening Status
 
-Current builds are unsigned.
+Implemented:
 
-Future release hardening:
+- Optional Windows Authenticode signing
+- Optional Linux detached GPG signatures
+- SHA-256 checksum files
+- Automatic latest-main prerelease publishing
 
-- Windows Authenticode signing
-- Checksums for release artifacts
+Still future work:
+
+- Paid trusted Windows certificate provisioning
+- Windows SmartScreen reputation building
 - SBOM generation
-- Signed GitHub releases
+- Public apt repository signing for Linux package repositories
 
-## Verification
+## Local Test Checks
 
 Before releasing:
 
