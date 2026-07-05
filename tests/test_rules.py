@@ -34,6 +34,11 @@ class RuleTests(unittest.TestCase):
         remaining = app_blocker.list_locked_apps("test password")
         self.assertFalse(any(rule["value"] == "steam.exe" for rule in remaining))
 
+    def test_app_name_matching_accepts_exact_exe_and_bare_name(self):
+        self.assertTrue(app_blocker._name_matches("codex.exe", "codex.exe"))
+        self.assertTrue(app_blocker._name_matches("codex", "codex.exe"))
+        self.assertFalse(app_blocker._name_matches("codex-helper.exe", "codex.exe"))
+
     def test_site_rules_normalize_and_build_hosts_block(self):
         site_blocker.add_blocked_site("https://www.Example.com/watch", "test password")
         sites = site_blocker.list_blocked_sites("test password")
