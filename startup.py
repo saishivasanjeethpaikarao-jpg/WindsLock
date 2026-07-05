@@ -62,7 +62,7 @@ def _tray_command() -> str:
 
 def enable_startup(password: str) -> None:
     if os.name != "nt":
-        raise RuntimeError("Start with Windows is only supported on Windows.")
+        raise RuntimeError("This startup option only works on Windows.")
     import winreg
 
     with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY, 0, winreg.KEY_SET_VALUE) as key:
@@ -75,7 +75,7 @@ def enable_startup(password: str) -> None:
 
 def disable_startup(password: str) -> None:
     if os.name != "nt":
-        raise RuntimeError("Start with Windows is only supported on Windows.")
+        raise RuntimeError("This startup option only works on Windows.")
     import winreg
 
     with winreg.OpenKey(winreg.HKEY_CURRENT_USER, RUN_KEY, 0, winreg.KEY_SET_VALUE) as key:
@@ -97,7 +97,7 @@ def install_scheduled_task(password: str, launch_tray: bool = True) -> str:
     current-user Run key so startup still works without admin rights.
     """
     if os.name != "nt":
-        raise RuntimeError("Scheduled tasks are only supported on Windows.")
+        raise RuntimeError("Stronger startup only works on Windows.")
     command = _tray_command() if launch_tray else _command()
     result = subprocess.run(
         [
@@ -124,18 +124,18 @@ def install_scheduled_task(password: str, launch_tray: bool = True) -> str:
             config = EncryptedDatabase(password)._data
             config["settings"]["startup_task"] = "run_key_fallback"
             EncryptedDatabase(password).save_dict(config)
-            return "Windows denied the pro startup task, so standard startup was enabled instead. Run Windslock as administrator to install the pro task."
+            return "Windows did not allow stronger startup, so normal startup was enabled instead. Run Windslock as administrator if you want stronger startup."
         raise RuntimeError(detail)
     config = EncryptedDatabase(password)._data
     config["settings"]["run_on_startup"] = True
     config["settings"]["startup_task"] = TASK_NAME
     EncryptedDatabase(password).save_dict(config)
-    return "Pro startup task installed."
+    return "Stronger startup is installed."
 
 
 def uninstall_scheduled_task(password: str | None = None) -> None:
     if os.name != "nt":
-        raise RuntimeError("Scheduled tasks are only supported on Windows.")
+        raise RuntimeError("Stronger startup only works on Windows.")
     result = subprocess.run(
         ["schtasks", "/Delete", "/TN", TASK_NAME, "/F"],
         capture_output=True,

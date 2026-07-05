@@ -10,11 +10,11 @@ startup tooling.
 ## Features
 
 - **Premium desktop UI**: Branded control-center layout with status cards, focused tabs, polished actions, and clearer diagnostics.
-- **Cross-Platform Security**: Background enforcement and tamper-proof DB storage using Windows DPAPI or Linux Keyring.
+- **Cross-Platform Security**: Protection and tamper-proof DB storage using Windows DPAPI or Linux Keyring.
 - **Application Locking**: Block desktop apps dynamically by process name or full path.
-- **Strict app lock mode**: By default, matched apps are stopped immediately. You can switch to detect/log mode from the Apps tab.
+- **Strict app lock mode**: By default, matched apps are stopped immediately. You can switch to detect/log mode from the Lock Apps tab.
 - **Password unlock**: Re-enter the master password to temporarily unlock a selected app for the configured window.
-- **Path-level Website Blocking**: Powered by a robust MITM proxy, restrict access to specific paths (e.g., `youtube.com/shorts`) without blocking the whole domain.
+- **Advanced advanced path-level Website Blocking**: Powered by a robust MITM proxy, restrict access to specific paths (e.g., `youtube.com/shorts`) without blocking the whole domain.
 - **Folder Encryption**: AES-level encryption secures local folders from prying eyes.
 - **Robust Database**: Features a zero-leakage `EncryptedDatabase` architecture leveraging Fernet encryption for full DB security.
 
@@ -23,22 +23,46 @@ startup tooling.
 | Area | What works now | Important limit |
 | --- | --- | --- |
 | App locking | Locks by `.exe` name or full executable path. Strict mode stops matching apps immediately. | User-level enforcement can be stopped by a Windows administrator. |
-| Website blocking | Blocks whole domains through reversible Windows hosts-file entries. | Requires administrator rights to edit the real hosts file. Browser Secure DNS can bypass or confuse testing. |
-| URL path blocking | Blocks paths like `/shorts` or `/reels` through the mitmproxy addon. | HTTPS path inspection requires a one-time local certificate install and browser proxy setup. |
+| Website blocking | Blocks whole domains through reversible Windows Windows website-blocking entries. | Requires administrator rights to edit the real Windows website-blocking file. Browser Secure DNS can bypass or confuse testing. |
+| URL path blocking | Blocks paths like `/shorts` or `/reels` through the advanced local proxy addon. | HTTPS path inspection requires a one-time local certificate install and browser proxy setup. |
 | Folder locking | Encrypts a folder into a `.locked` file and restores it during unlock. | Keep backups; losing both password and recovery codes can make encrypted folders unrecoverable. |
 | Unlock/recovery | Supports master password, emergency recovery codes, timed phrase overrides, and password unlock for selected apps. | Recovery codes must be saved outside the app folder. |
 | Background mode | Keeps app enforcement active after the UI is closed. | A true enterprise-grade service would require a signed Windows service and installer flow. |
 
 ## App Tour
 
-- **Dashboard**: Shows the lock engine, startup, hosts status, rule count, and a compact system snapshot.
+- **Home**: Shows the protection, startup, hosts status, rule count, and a compact system snapshot.
 - **Focus**: Applies preset rule sets, starts timed focus sessions, and manages weekly schedules.
-- **Apps**: Adds app rules, picks from running processes, tests selected rules, toggles strict mode, and password-unlocks a selected app.
-- **Websites**: Adds domain blocks, applies or rolls back hosts entries, checks Windows permission/status, and manages URL path rules.
-- **Folders**: Locks folders into encrypted `.locked` files and unlocks them when needed.
-- **Overrides**: Manages the commitment phrase, cooldown timer, unlock window, and override request history.
+- **Lock Apps**: Adds app rules, picks from running processes, tests selected rules, toggles strict mode, and password-unlocks a selected app.
+- **Block Websites**: Adds domain blocks, applies or rolls back hosts entries, checks Windows permission/status, and manages URL path rules.
+- **Lock Folders**: Locks folders into encrypted `.locked` files and unlocks them when needed.
+- **Temporary Unlock**: Manages the unlock phrase, cooldown timer, unlock window, and override request history.
 - **History**: Shows recent blocked attempts, override actions, hosts events, and security changes.
-- **Settings**: Manages startup, scheduled task startup, config ACL hardening, password changes, and app data access.
+- **Settings**: Manages Windows startup, stronger startup, password changes, and the app data folder.
+
+
+## Simple Guide
+
+Windslock has four main jobs:
+
+1. **Lock apps**: choose an app like `chrome.exe`, `codex.exe`, or `notepad.exe`. When protection is on, Windslock closes that app when someone opens it.
+2. **Block websites**: add a domain like `youtube.com` or `instagram.com`, then turn web blocking on.
+3. **Lock folders**: choose a private folder and Windslock turns it into an encrypted `.locked` file.
+4. **Temporary unlock**: unlock something for a short time with your password or the unlock phrase.
+
+For most users, the normal flow is:
+
+1. Open Windslock.
+2. Add apps or websites.
+3. Press **Turn protection on**.
+4. Keep **Close locked apps immediately** checked.
+5. Use **History** to see what was blocked.
+
+Some features need administrator permission because Windows protects them:
+
+- Website blocking needs admin when turning it on or off.
+- Stronger startup needs admin. Normal startup works without admin.
+- A Windows administrator can still bypass user-level protection.
 
 ## Documentation
 
@@ -74,12 +98,12 @@ section.
 2. Install and open Windslock.
 3. Create a master password.
 4. Save the emergency recovery codes outside the app folder.
-5. Open **Apps**, add a harmless test app such as `notepad.exe`, and keep **Stop locked apps immediately** enabled.
-6. Press **Start lock engine** or **Start background**.
+5. Open **Lock Apps**, add a harmless test app such as `notepad.exe`, and keep **Close locked apps immediately** enabled.
+6. Press **Start protection** or **Turn protection on**.
 7. Open Notepad to confirm it is closed by Windslock.
 
 For website blocking, run Windslock as administrator before pressing
-**Apply + flush DNS** in the Websites tab.
+**Turn web blocking on** in the Block Websites tab.
 
 ### Source Setup
 
@@ -120,7 +144,7 @@ Run only the tray controller:
 run_tray.bat
 ```
 
-Run as administrator when applying website blocks to the real Windows hosts file:
+Run as administrator when applying website blocks to the real Windows Windows website-blocking file:
 
 ```powershell
 run_windslock_admin.bat
@@ -138,8 +162,8 @@ The tray controller gives quick access to:
 
 - Open Windslock
 - Start/stop enforcement
-- Start the path-level proxy
-- Open mitmproxy certificate help
+- Start the advanced path-level proxy
+- Open advanced local proxy certificate help
 
 For more reliable startup than the registry Run key, install the scheduled task:
 
@@ -179,16 +203,16 @@ Common actions:
 
 - Add an app rule with an executable name like `notepad.exe` or a full path like `C:\Games\App\game.exe`.
 - Add a website rule with a domain like `youtube.com`.
-- Add a path-level website rule with a domain and path prefix, such as
+- Add a advanced path-level website rule with a domain and path prefix, such as
   `youtube.com` plus `/shorts`.
-- Apply website rules to the hosts file from an elevated terminal.
-- Run `run_proxy.bat` when you need path-level website blocking.
+- Apply website rules to the Windows website-blocking file from an elevated terminal.
+- Run `run_proxy.bat` when you need advanced path-level website blocking.
 - Apply a Focus preset if you want useful defaults without building every rule
   by hand.
 - Use a timed Focus session for temporary strict enforcement.
 - Enable schedule-only mode when you want blocking only during focus sessions or
   weekly schedule windows.
-- Enable background enforcement after signing in.
+- Enable protection after signing in.
 - Enable start with Windows if you want the enforcer to start on login.
 - Use the history option to review recent blocked attempts.
 
@@ -199,21 +223,21 @@ App locks are stored as normalized rules:
 - `name`: process name such as `codex.exe`, `notepad.exe`, or `chrome.exe`.
 - `path`: full executable path such as `C:\Program Files\App\App.exe`.
 
-Strict mode is enabled by default. When the background lock engine sees a
+Strict mode is enabled by default. When the background protection sees a
 matching process, it stops it and records the attempt in History. Detect/log mode
 is available for testing, but it does not block the app.
 
 For the most reliable app locks:
 
 1. Use **Running apps** to select the exact process.
-2. Keep **Stop locked apps immediately** checked.
-3. Press **Start lock engine** after adding rules.
+2. Keep **Close locked apps immediately** checked.
+3. Press **Start protection** after adding rules.
 4. Use **Test selected** to confirm the rule matches a running process.
-5. Enable **Start with Windows** or install the pro startup task for login startup.
+5. Enable **Start with Windows** for normal startup, or use **Stronger startup** when running as administrator.
 
 ## Website Blocking And Rollback
 
-Website blocking uses the Windows hosts file:
+Website blocking uses the Windows Windows website-blocking file:
 
 `C:\Windows\System32\drivers\etc\hosts`
 
@@ -225,23 +249,23 @@ Windslock writes only between these markers:
 ```
 
 Rollback removes only that marked section. Applying or rolling back the real
-hosts file usually requires an elevated terminal.
+Windows website-blocking file usually requires an elevated terminal.
 
 For Chrome, Edge, Brave, and other Chromium browsers:
 
-- Run Windslock as administrator before pressing **Apply + flush DNS**.
+- Run Windslock as administrator before pressing **Turn web blocking on**.
 - Restart the browser after applying rules.
 - If a blocked domain still opens, turn off the browser's Secure DNS / DNS-over-HTTPS setting, then apply again.
 - Whole-domain blocks now write IPv4 and IPv6 entries for the domain plus common `www.` and `m.` variants.
 - Hosts-file blocking cannot wildcard every possible subdomain. Add specific subdomains when needed.
 
-The Websites tab includes a **Check** button that shows whether Windslock can
-write the hosts file and whether the saved rules are present.
+The Block Websites tab includes a **Check** button that shows whether Windslock can
+write the Windows website-blocking file and whether the saved rules are present.
 
 ## Path-Level Website Blocking
 
 Hosts-file blocking cannot see URL paths. It can block `youtube.com`, but not
-only `youtube.com/shorts`. For path-level rules, Windslock includes a mitmproxy
+only `youtube.com/shorts`. For advanced path-level rules, Windslock includes a advanced local proxy
 addon:
 
 ```powershell
@@ -255,17 +279,17 @@ HTTP proxy:  127.0.0.1
 Port:        8080
 ```
 
-For HTTPS websites, install mitmproxy's local certificate once:
+For HTTPS websites, install advanced local proxy's local certificate once:
 
 ```powershell
 open_proxy_cert_help.bat
 ```
 
 That opens `http://mitm.it` while the proxy is running. Follow the Windows cert
-install steps from mitmproxy. This is required because HTTPS hides the URL path
-from normal DNS/hosts blocking.
+install steps from advanced local proxy. This is required because HTTPS hides the URL path
+from normal website blocking.
 
-Path-level rules are managed in the Websites tab. Examples:
+Advanced advanced path-level rules are managed in the Block Websites tab. Examples:
 
 - `youtube.com` + `/shorts`
 - `instagram.com` + `/reels`
@@ -273,22 +297,22 @@ Path-level rules are managed in the Websites tab. Examples:
 
 Limits:
 
-- Apps or browsers that bypass the configured proxy will bypass path-level rules.
+- Lock Apps or browsers that bypass the configured proxy will bypass advanced path-level rules.
 - Certificate pinning may prevent inspection for some apps.
-- Do not install the mitmproxy certificate unless you understand that the local
+- Do not install the advanced local proxy certificate unless you understand that the local
   proxy can inspect HTTPS traffic while it is active.
 
-## Temporary Overrides
+## Temporary Temporary Unlock
 
-Overrides are intentionally friction-based:
+Temporary Unlock are intentionally friction-based:
 
 1. Request an override for an app, site, URL path, or folder target.
-2. Type the exact commitment phrase. A mismatch is denied immediately and logged.
+2. Type the exact unlock phrase. A mismatch is denied immediately and logged.
 3. If the phrase is correct, the cooldown starts. Default: 5 minutes.
 4. After cooldown, the target unlocks for a limited window. Default: 10 minutes.
 5. When the window ends, Windslock automatically re-locks and logs the event.
 
-The phrase and timers are managed in the Overrides tab. The default phrase is:
+The phrase and timers are managed in the Temporary Unlock tab. The default phrase is:
 
 ```text
 I understand this is temporary and I will return to focus
@@ -299,7 +323,7 @@ For app overrides, use the same target shown in the app lock table, such as
 use the domain, such as `youtube.com`. For URL path overrides, use
 `domain/path`, such as `youtube.com/shorts`.
 
-The Apps tab also has **Password unlock selected**. It asks for the master
+The Lock Apps tab also has **Password unlock selected**. It asks for the master
 password again, creates an immediate timed app override, logs the action, and
 auto re-locks when the window expires. The default window is 10 minutes.
 
@@ -308,7 +332,7 @@ auto re-locks when the window expires. The default window is 10 minutes.
 The Focus tab adds user-friendly workflows on top of raw blocking rules:
 
 - Presets: `Deep Work`, `Study Mode`, and `Social Detox` add common distracting
-  apps, domains, and path-level rules.
+  apps, domains, and advanced path-level rules.
 - Timed focus sessions: set a duration, start the session, and Windslock logs it.
 - Schedule-only mode: when enabled, rules enforce only during an active focus
   session or a matching weekly schedule.
@@ -333,14 +357,14 @@ Safety notes:
 
 ## Background Enforcement
 
-Background enforcement is a normal user-session Python process, not a Windows
+Protection is a normal user-session Python process, not a Windows
 kernel driver or enterprise AppLocker policy. It polls running processes and
 kills matches. When enabled, it stores only the encrypted config data key through
 Windows DPAPI or Linux Keyring for the current user.
 
 Limits:
 
-- An administrator can stop the process, edit startup settings, change hosts-file entries, delete app files, or run tools from another account.
+- An administrator can stop the process, edit startup settings, change Windows website-blocking entries, delete app files, or run tools from another account.
 - A fast-launching app may appear briefly before the next polling cycle kills it.
 - Strong anti-tamper needs a signed Windows service, installer, service recovery settings, and admin-managed policy.
 
@@ -350,7 +374,7 @@ Current protections are basic:
 
 - Config is encrypted via `EncryptedDatabase`.
 - Background unlock uses OS secure store (DPAPI/Keyring).
-- Optional ACL hardening restricts the config folder to the current user, Administrators, and SYSTEM.
+- **Protect settings folder** restricts the app settings folder to the current user, Administrators, and SYSTEM.
 - Startup registration can restart enforcement at login.
 
 This does not prevent a local administrator from bypassing Windslock.

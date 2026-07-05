@@ -161,7 +161,7 @@ class WindslockApp(ctk.CTk):
 
         self.notebook = ttk.Notebook(root)
         self.notebook.pack(fill="both", expand=True)
-        self._build_dashboard()
+        self._build_home()
         self._build_focus()
         self._build_apps()
         self._build_sites()
@@ -251,11 +251,11 @@ class WindslockApp(ctk.CTk):
         ctk.CTkLabel(body, textvariable=variable, text_color=TEXT_MAIN, font=("Segoe UI", 18, "bold")).pack(anchor="w", pady=(4, 0))
         return card
 
-    def _build_dashboard(self):
-        tab = self._tab("Dashboard")
+    def _build_home(self):
+        tab = self._tab("Home")
         header = ctk.CTkFrame(tab, fg_color="transparent")
         header.pack(fill="x", pady=(4, 12))
-        ctk.CTkLabel(header, text="Control Center", font=("Segoe UI", 22, "bold"), text_color=TEXT_MAIN).pack(side="left")
+        ctk.CTkLabel(header, text="Protection Center", font=("Segoe UI", 22, "bold"), text_color=TEXT_MAIN).pack(side="left")
         self._button(header, "Refresh", self.refresh_all, "muted", width=110).pack(side="right")
 
         metrics = ctk.CTkFrame(tab, fg_color="transparent")
@@ -263,16 +263,16 @@ class WindslockApp(ctk.CTk):
         for column in range(4):
             metrics.columnconfigure(column, weight=1, uniform="metrics")
         cards = (
-            self._metric_card(metrics, "Lock Engine", self.background_metric_var, SUCCESS),
-            self._metric_card(metrics, "Startup", self.startup_metric_var, ACCENT),
-            self._metric_card(metrics, "Website Hosts", self.hosts_metric_var, WARNING),
-            self._metric_card(metrics, "Rules", self.rules_metric_var, "#7C3AED"),
+            self._metric_card(metrics, "Protection", self.background_metric_var, SUCCESS),
+            self._metric_card(metrics, "Starts With PC", self.startup_metric_var, ACCENT),
+            self._metric_card(metrics, "Web Blocking", self.hosts_metric_var, WARNING),
+            self._metric_card(metrics, "Locks Added", self.rules_metric_var, "#7C3AED"),
         )
         for column, card in enumerate(cards):
             card.grid(row=0, column=column, sticky="nsew", padx=(0 if column == 0 else 6, 0 if column == 3 else 6))
 
         summary_card = self._card(tab, fill="both", expand=True)
-        ctk.CTkLabel(summary_card, text="System Snapshot", font=("Segoe UI", 15, "bold"), text_color=TEXT_MAIN).pack(anchor="w", padx=14, pady=(12, 6))
+        ctk.CTkLabel(summary_card, text="What is active", font=("Segoe UI", 15, "bold"), text_color=TEXT_MAIN).pack(anchor="w", padx=14, pady=(12, 6))
         self.summary = tk.Text(
             summary_card,
             height=16,
@@ -286,12 +286,12 @@ class WindslockApp(ctk.CTk):
         self.summary.pack(fill="both", expand=True, padx=12, pady=(0, 12))
         actions = ctk.CTkFrame(tab, fg_color="transparent")
         actions.pack(fill="x", pady=(12, 0))
-        self._button(actions, "Start background", self.enable_background, "success").pack(side="left", padx=(0, 8))
-        self._button(actions, "Stop background", self.disable_background, "danger").pack(side="left", padx=(0, 8))
+        self._button(actions, "Turn protection on", self.enable_background, "success").pack(side="left", padx=(0, 8))
+        self._button(actions, "Turn protection off", self.disable_background, "danger").pack(side="left", padx=(0, 8))
         self._button(actions, "Open app data", self.show_appdata, "muted").pack(side="left")
 
     def _build_focus(self):
-        tab = self._tab("Focus")
+        tab = self._tab("Focus Time")
 
         presets = self._card(tab, fill="x", pady=(4, 0))
         self.preset_choice = ttk.Combobox(presets, values=tuple(focus_manager.PRESETS.keys()), state="readonly")
@@ -312,7 +312,7 @@ class WindslockApp(ctk.CTk):
         self.schedule_only_var = ctk.BooleanVar()
         ctk.CTkCheckBox(
             schedule_mode,
-            text="Only enforce during focus sessions or schedules",
+            text="Only block during focus time or schedules",
             variable=self.schedule_only_var,
             command=self.save_schedule_only_mode,
         ).pack(anchor="w")
@@ -345,15 +345,15 @@ class WindslockApp(ctk.CTk):
         self._button(tab, "Remove selected schedule", self.remove_schedule, "danger", width=190).pack(anchor="e")
 
     def _build_apps(self):
-        tab = self._tab("Apps")
+        tab = self._tab("Lock Apps")
         status = ctk.CTkFrame(tab, fg_color=PANEL_BG, border_color=BORDER, border_width=1, corner_radius=12)
         status.pack(fill="x", pady=(0, 10), padx=4)
         ctk.CTkLabel(status, textvariable=self.app_lock_status_var, anchor="w").pack(side="left", fill="x", expand=True, padx=12, pady=10)
-        self._button(status, "Start lock engine", self.enable_background, "success").pack(side="right", padx=12, pady=10)
+        self._button(status, "Turn on", self.enable_background, "success").pack(side="right", padx=12, pady=10)
 
         form = ctk.CTkFrame(tab, fg_color="transparent")
         form.pack(fill="x")
-        self.app_entry = ctk.CTkEntry(form, height=36, placeholder_text="App name or full executable path")
+        self.app_entry = ctk.CTkEntry(form, height=36, placeholder_text="Example: chrome.exe or choose Browse")
         self.app_entry.pack(side="left", fill="x", expand=True, padx=(0, 8))
         self._button(form, "Browse", self.pick_app, "muted", width=100).pack(side="left", padx=(0, 8))
         self._button(form, "Running apps", self.choose_running_app, "muted", width=130).pack(side="left", padx=(0, 8))
@@ -367,7 +367,7 @@ class WindslockApp(ctk.CTk):
         app_buttons = ctk.CTkFrame(tab, fg_color="transparent")
         app_buttons.pack(fill="x")
         self._button(app_buttons, "Test selected", self.test_selected_app_rule, "muted", width=130).pack(side="left")
-        self._button(app_buttons, "Password unlock", self.password_unlock_selected_app, "primary", width=150).pack(side="left", padx=(8, 0))
+        self._button(app_buttons, "Unlock for a while", self.password_unlock_selected_app, "primary", width=150).pack(side="left", padx=(8, 0))
         self._button(app_buttons, "Remove selected", self.remove_app, "danger", width=150).pack(side="right")
 
         options = ctk.CTkFrame(tab, fg_color="transparent")
@@ -375,18 +375,18 @@ class WindslockApp(ctk.CTk):
         self.strict_app_lock_var = ctk.BooleanVar(value=True)
         ctk.CTkCheckBox(
             options,
-            text="Stop locked apps immediately",
+            text="Close locked apps immediately",
             variable=self.strict_app_lock_var,
             command=self.save_strict_app_lock,
         ).pack(anchor="w")
 
     def _build_sites(self):
-        tab = self._tab("Websites")
+        tab = self._tab("Block Websites")
         status = ctk.CTkFrame(tab, fg_color=PANEL_BG, border_color=BORDER, border_width=1, corner_radius=12)
         status.pack(fill="x", pady=(0, 10), padx=4)
         ctk.CTkLabel(status, textvariable=self.site_lock_status_var, anchor="w").pack(side="left", fill="x", expand=True, padx=12, pady=10)
         self._button(status, "Check", self.check_website_block, "muted", width=100).pack(side="right", padx=(0, 12), pady=10)
-        ctk.CTkLabel(tab, text="Domain blocks", font=("Segoe UI", 14, "bold"), text_color=TEXT_MAIN).pack(anchor="w")
+        ctk.CTkLabel(tab, text="Block a whole website", font=("Segoe UI", 14, "bold"), text_color=TEXT_MAIN).pack(anchor="w")
         form = ctk.CTkFrame(tab, fg_color="transparent")
         form.pack(fill="x", pady=(6, 0))
         self.site_entry = ctk.CTkEntry(form, height=36, placeholder_text="example.com")
@@ -408,11 +408,11 @@ class WindslockApp(ctk.CTk):
         buttons = ctk.CTkFrame(tab, fg_color="transparent")
         buttons.pack(fill="x")
         self._button(buttons, "Remove selected", self.remove_site, "danger", width=150).pack(side="left")
-        self._button(buttons, "Apply + flush DNS", self.apply_hosts, "success", width=160).pack(side="right")
-        self._button(buttons, "Rollback hosts", self.rollback_hosts, "muted", width=140).pack(side="right", padx=(0, 8))
+        self._button(buttons, "Turn web blocking on", self.apply_hosts, "success", width=160).pack(side="right")
+        self._button(buttons, "Turn web blocking off", self.rollback_hosts, "muted", width=140).pack(side="right", padx=(0, 8))
 
         ttk.Separator(tab).pack(fill="x", pady=12)
-        ctk.CTkLabel(tab, text="URL path blocks", font=("Segoe UI", 14, "bold"), text_color=TEXT_MAIN).pack(anchor="w")
+        ctk.CTkLabel(tab, text="Block only part of a website (advanced)", font=("Segoe UI", 14, "bold"), text_color=TEXT_MAIN).pack(anchor="w")
         path_form = ctk.CTkFrame(tab, fg_color="transparent")
         path_form.pack(fill="x", pady=(6, 0))
         self.path_domain_entry = ctk.CTkEntry(path_form, width=280, height=36)
@@ -432,7 +432,7 @@ class WindslockApp(ctk.CTk):
         self._button(path_buttons, "Remove selected path", self.remove_path_rule, "danger", width=180).pack(side="left")
 
     def _build_folders(self):
-        tab = self._tab("Folders")
+        tab = self._tab("Lock Folders")
         buttons = ctk.CTkFrame(tab, fg_color="transparent")
         buttons.pack(fill="x", pady=(0, 10))
         self._button(buttons, "Lock folder", self.lock_folder, "primary", width=130).pack(side="left", padx=(0, 8))
@@ -443,15 +443,15 @@ class WindslockApp(ctk.CTk):
         self.folders_tree.pack(fill="both", expand=True)
 
     def _build_overrides(self):
-        tab = self._tab("Overrides")
+        tab = self._tab("Temporary Unlock")
         settings = self._card(tab, fill="x")
-        ctk.CTkLabel(settings, text="Commitment phrase", text_color=TEXT_MUTED).grid(row=0, column=0, sticky="w", padx=(12, 0), pady=6)
+        ctk.CTkLabel(settings, text="Unlock phrase", text_color=TEXT_MUTED).grid(row=0, column=0, sticky="w", padx=(12, 0), pady=6)
         self.override_phrase = ctk.CTkEntry(settings, height=34)
         self.override_phrase.grid(row=0, column=1, sticky="ew", padx=(8, 0), pady=3)
-        ctk.CTkLabel(settings, text="Cooldown minutes", text_color=TEXT_MUTED).grid(row=1, column=0, sticky="w", padx=(12, 0), pady=6)
+        ctk.CTkLabel(settings, text="Wait time minutes", text_color=TEXT_MUTED).grid(row=1, column=0, sticky="w", padx=(12, 0), pady=6)
         self.override_cooldown = ttk.Spinbox(settings, from_=0, to=240, width=8)
         self.override_cooldown.grid(row=1, column=1, sticky="w", padx=(8, 0), pady=3)
-        ctk.CTkLabel(settings, text="Unlock window minutes", text_color=TEXT_MUTED).grid(row=2, column=0, sticky="w", padx=(12, 0), pady=6)
+        ctk.CTkLabel(settings, text="Unlocked for minutes", text_color=TEXT_MUTED).grid(row=2, column=0, sticky="w", padx=(12, 0), pady=6)
         self.override_window = ttk.Spinbox(settings, from_=1, to=240, width=8)
         self.override_window.grid(row=2, column=1, sticky="w", padx=(8, 0), pady=3)
         settings.columnconfigure(1, weight=1)
@@ -464,7 +464,7 @@ class WindslockApp(ctk.CTk):
         self.override_type.grid(row=0, column=0, padx=(0, 8))
         self.override_target = ctk.CTkEntry(request, height=34, placeholder_text="Target")
         self.override_target.grid(row=0, column=1, sticky="ew", padx=(0, 8))
-        self.override_phrase_attempt = ctk.CTkEntry(request, height=34, placeholder_text="Commitment phrase")
+        self.override_phrase_attempt = ctk.CTkEntry(request, height=34, placeholder_text="Unlock phrase")
         self.override_phrase_attempt.grid(row=0, column=2, sticky="ew", padx=(0, 8))
         self._button(request, "Request", self.request_override, width=110).grid(row=0, column=3)
         request.columnconfigure(1, weight=1)
@@ -490,11 +490,11 @@ class WindslockApp(ctk.CTk):
         tab = self._tab("Settings")
         panel = self._card(tab, fill="x", pady=(4, 0))
         for text, command, variant in (
-            ("Enable start with Windows", self.enable_startup, "success"),
-            ("Disable start with Windows", self.disable_startup, "muted"),
-            ("Install pro startup task", self.install_startup_task, "primary"),
-            ("Remove pro startup task", self.remove_startup_task, "danger"),
-            ("Harden config folder ACL", self.harden_acl, "primary"),
+            ("Start when Windows starts", self.enable_startup, "success"),
+            ("Do not start with Windows", self.disable_startup, "muted"),
+            ("Stronger startup (admin)", self.install_startup_task, "primary"),
+            ("Remove stronger startup", self.remove_startup_task, "danger"),
+            ("Protect settings folder", self.harden_acl, "primary"),
             ("Change master password", self.change_password, "primary"),
             ("Show app data folder", self.show_appdata, "muted"),
         ):
@@ -518,8 +518,8 @@ class WindslockApp(ctk.CTk):
         enforce_now = focus_manager.should_enforce(config)
         self.status_var.set(
             f"Background: {'running' if running else 'stopped'} | "
-            f"Startup: {'on' if config['settings'].get('run_on_startup') else 'off'} | "
-            f"Hosts: {'applied' if config['settings'].get('website_hosts_applied') else 'not applied'}"
+            f"Starts With PC: {'on' if config['settings'].get('run_on_startup') else 'off'} | "
+            f"Web: {'on' if config['settings'].get('website_hosts_applied') else 'off'}"
         )
         total_rules = (
             len(config.get("locked_apps", []))
@@ -529,7 +529,7 @@ class WindslockApp(ctk.CTk):
         )
         self.background_metric_var.set("Running" if running else "Stopped")
         self.startup_metric_var.set("On" if config["settings"].get("run_on_startup") else "Off")
-        self.hosts_metric_var.set("Applied" if config["settings"].get("website_hosts_applied") else "Not applied")
+        self.hosts_metric_var.set("On" if config["settings"].get("website_hosts_applied") else "Off")
         self.rules_metric_var.set(str(total_rules))
         self._refresh_app_lock_status(config, running, enforce_now)
         self._refresh_site_lock_status(config)
@@ -547,35 +547,35 @@ class WindslockApp(ctk.CTk):
     def _refresh_app_lock_status(self, config, running: bool, enforce_now: bool):
         app_count = len(config.get("locked_apps", []))
         if not app_count:
-            text = "No app rules yet."
+            text = "No apps added yet."
         elif not config["settings"].get("background_enabled"):
-            text = f"{app_count} app rule(s), but background unlock is off."
+            text = f"{app_count} app(s), but protection is off."
         elif not running:
-            text = f"{app_count} app rule(s), but the lock engine is stopped."
+            text = f"{app_count} app(s), but protection is off."
         elif not enforce_now:
-            text = f"{app_count} app rule(s), paused by schedule-only mode."
+            text = f"{app_count} app(s), paused until focus time."
         else:
-            text = f"{app_count} app rule(s), lock engine running."
+            text = f"{app_count} app(s), protection is on."
         self.app_lock_status_var.set(text)
 
     def _refresh_site_lock_status(self, config):
         site_count = len(config.get("blocked_sites", []))
         if not site_count:
-            text = "No website rules yet."
+            text = "No websites added yet."
         elif not config["settings"].get("website_hosts_applied"):
-            text = f"{site_count} website rule(s), not applied to Windows yet."
+            text = f"{site_count} website(s), not active yet."
         else:
-            text = f"{site_count} website rule(s), hosts block marked applied."
+            text = f"{site_count} website(s), web blocking is on."
         self.site_lock_status_var.set(text)
 
     def refresh_summary(self):
         config = self._load()
         lines = [
             "STATUS",
-            f"  Lock engine        {'running' if runtime_control.is_enforcer_running() else 'stopped'}",
-            f"  Start with Windows {'enabled' if config['settings'].get('run_on_startup') else 'disabled'}",
-            f"  Website hosts      {'applied' if config['settings'].get('website_hosts_applied') else 'not applied'}",
-            f"  Schedule mode      {'enabled' if config['settings'].get('schedule_only_mode') else 'disabled'}",
+            f"  Protection          {'running' if runtime_control.is_enforcer_running() else 'stopped'}",
+            f"  Starts with PC      {'enabled' if config['settings'].get('run_on_startup') else 'disabled'}",
+            f"  Website blocking   {'on' if config['settings'].get('website_hosts_applied') else 'off'}",
+            f"  Focus schedule      {'enabled' if config['settings'].get('schedule_only_mode') else 'disabled'}",
             f"  Focus session      {config['settings'].get('focus_session_until') or 'not active'}",
             "",
             "RULES",
@@ -583,7 +583,7 @@ class WindslockApp(ctk.CTk):
             f"  Website domains    {len(config['blocked_sites'])}",
             f"  URL path rules     {len(config['blocked_url_paths'])}",
             f"  Locked folders     {len(config['locked_folders'])}",
-            f"  Override records   {len(config['override_requests'])}",
+            f"  Unlock records     {len(config['override_requests'])}",
             f"  Focus schedules    {len(config['focus_schedules'])}",
             "",
             "SECURITY",
@@ -745,18 +745,18 @@ class WindslockApp(ctk.CTk):
         config = self._load()
         notes = []
         if config["settings"].get("schedule_only_mode") and not focus_manager.should_enforce(config):
-            notes.append("Rule saved, but schedule-only mode is currently paused.")
+            notes.append("Saved. It will block during focus time.")
         was_running = runtime_control.is_enforcer_running()
         cfg.enable_background_unlock(self.password)
         if not config["settings"].get("background_enabled"):
-            notes.append("Background unlock enabled.")
+            notes.append("Protection turned on.")
         else:
-            notes.append("Background unlock refreshed.")
+            notes.append("Protection refreshed.")
         if not runtime_control.start_enforcer_and_wait():
-            raise RuntimeError("Lock engine did not stay running. Open Settings, enable background again, then try once more.")
+            raise RuntimeError("Protection could not start. Open Settings and turn protection on again.")
         if not was_running:
-            notes.append("Lock engine started.")
-        return "App rule added. " + (" ".join(notes) if notes else "Lock engine is running.")
+            notes.append("Protection started.")
+        return "App rule added. " + (" ".join(notes) if notes else "Protection is on.")
 
     def remove_app(self):
         item = self.apps_tree.focus()
@@ -777,9 +777,9 @@ class WindslockApp(ctk.CTk):
         enforce_now = focus_manager.should_enforce(config)
         if matches and running and enforce_now:
             detail = "\n".join(f"{match['name']} pid={match['pid']}" for match in matches[:8])
-            messagebox.showinfo(APP_TITLE, f"Rule matches running process(es):\n{detail}\n\nThe lock engine should block them.", parent=self)
+            messagebox.showinfo(APP_TITLE, f"This lock matches a running app:\n{detail}\n\nProtection should close it.", parent=self)
         elif matches:
-            reason = "lock engine is stopped" if not running else "schedule-only mode is paused"
+            reason = "protection service is stopped" if not running else "focus schedule is paused"
             messagebox.showwarning(APP_TITLE, f"Rule matches a running process, but {reason}.", parent=self)
         else:
             messagebox.showinfo(APP_TITLE, "No running process currently matches this rule.", parent=self)
@@ -799,7 +799,7 @@ class WindslockApp(ctk.CTk):
         config = self._load()
         minutes = int(config["settings"].get("password_unlock_minutes", 10))
         result = self._run(
-            "Password unlock",
+            "Unlock for a while",
             lambda: override_manager.password_unlock(password, "app", value, minutes),
         )
         if result:
@@ -845,16 +845,16 @@ class WindslockApp(ctk.CTk):
         self._run("Remove path rule", lambda: url_rule_engine.remove_path_rule(domain, path_prefix, self.password))
 
     def apply_hosts(self):
-        result = self._run("Apply hosts block", lambda: site_blocker.apply_hosts_block(self.password))
+        result = self._run("Turn web blocking on", lambda: site_blocker.apply_hosts_block(self.password))
         if result:
             messagebox.showinfo(
                 APP_TITLE,
-                "Website block applied and DNS cache flushed.\n\nIf a Chromium browser still opens it, restart the browser and turn off Secure DNS in Chrome, Edge, or Brave.",
+                "Web blocking is on.\n\nIf the website still opens, restart the browser. In Chrome, Edge, or Brave, turn off Secure DNS if needed.",
                 parent=self,
             )
 
     def rollback_hosts(self):
-        self._run("Rollback hosts block", lambda: self._rollback_hosts_and_save())
+        self._run("Turn web blocking off", lambda: self._rollback_hosts_and_save())
 
     def _rollback_hosts_and_save(self):
         path = site_blocker.rollback_hosts_block()
@@ -869,16 +869,16 @@ class WindslockApp(ctk.CTk):
         if not status:
             return
         if status["error"] == "admin_required":
-            detail = "Windows did not allow Windslock to edit the hosts file. Run Windslock as administrator, then Apply + flush DNS."
+            detail = "Windows needs administrator permission for website blocking. Run Windslock as administrator, then turn web blocking on."
         elif status["domain_count"] and not status["rules_present"]:
-            detail = "Rules are saved but not present in the hosts file yet. Press Apply + flush DNS from an administrator run."
+            detail = "Your websites are saved, but Windows has not applied them yet. Run Windslock as administrator and turn web blocking on."
         elif status["domain_count"]:
-            detail = "Rules are present in the hosts file. Restart the browser if it cached the site. For Chrome, Edge, and Brave, also turn off Secure DNS if needed."
+            detail = "Web blocking is on. Restart the browser if it cached the website. In Chrome, Edge, and Brave, turn off Secure DNS if needed."
         else:
             detail = "No website rules are saved yet."
         messagebox.showinfo(
             APP_TITLE,
-            f"{detail}\n\nHosts file:\n{status['hosts_path']}",
+            f"{detail}\n\nWindows file:\n{status['hosts_path']}",
             parent=self,
         )
 
@@ -916,26 +916,26 @@ class WindslockApp(ctk.CTk):
         def enable():
             cfg.enable_background_unlock(self.password)
             if not runtime_control.start_enforcer_and_wait():
-                raise RuntimeError("Lock engine did not stay running.")
-        self._run("Enable background", enable)
+                raise RuntimeError("Protection could not start.")
+        self._run("Turn protection on", enable)
 
     def disable_background(self):
-        self._run("Disable background", lambda: (cfg.disable_background_unlock(self.password), runtime_control.stop_enforcer()))
+        self._run("Turn protection off", lambda: (cfg.disable_background_unlock(self.password), runtime_control.stop_enforcer()))
 
     def enable_startup(self):
-        self._run("Enable startup", lambda: startup.enable_startup(self.password))
+        self._run("Start with Windows", lambda: startup.enable_startup(self.password))
 
     def disable_startup(self):
-        self._run("Disable startup", lambda: startup.disable_startup(self.password))
+        self._run("Stop starting with Windows", lambda: startup.disable_startup(self.password))
 
     def install_startup_task(self):
-        self._run("Install startup task", lambda: startup.install_scheduled_task(self.password, launch_tray=True))
+        self._run("Set stronger startup", lambda: startup.install_scheduled_task(self.password, launch_tray=True))
 
     def remove_startup_task(self):
-        self._run("Remove startup task", lambda: startup.uninstall_scheduled_task(self.password))
+        self._run("Remove stronger startup", lambda: startup.uninstall_scheduled_task(self.password))
 
     def harden_acl(self):
-        self._run("Harden ACL", lambda: tamper.harden_config_acl(self.password))
+        self._run("Protect settings folder", lambda: tamper.harden_config_acl(self.password))
 
     def apply_preset(self):
         name = self.preset_choice.get()
@@ -993,7 +993,7 @@ class WindslockApp(ctk.CTk):
                 lambda: override_manager.request_override(self.password, target_type, target, phrase),
             )
             if result:
-                messagebox.showinfo(APP_TITLE, f"Override status: {result['status']}", parent=self)
+                messagebox.showinfo(APP_TITLE, f"Unlock request: {result['status']}", parent=self)
 
     def change_password(self):
         old = simpledialog.askstring(APP_TITLE, "Current password", show="*", parent=self)
