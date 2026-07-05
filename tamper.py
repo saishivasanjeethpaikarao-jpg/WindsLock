@@ -10,6 +10,7 @@ import os
 import subprocess
 
 import config as cfg
+from database import EncryptedDatabase
 
 
 def harden_config_acl(password: str) -> str:
@@ -29,7 +30,7 @@ def harden_config_acl(password: str) -> str:
     result = subprocess.run(command, capture_output=True, text=True, check=False)
     if result.returncode != 0:
         raise RuntimeError(result.stderr.strip() or result.stdout.strip() or "icacls failed")
-    config = cfg.load_config(password)
+    config = EncryptedDatabase(password)._data
     config["settings"]["tamper_hardened"] = True
-    cfg.save_config(config, password)
+    EncryptedDatabase(password).save_dict(config)
     return result.stdout.strip()

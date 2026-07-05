@@ -15,6 +15,7 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 
 import audit_log
 import config as cfg
+from database import EncryptedDatabase
 
 
 ITERATIONS = 390000
@@ -98,10 +99,10 @@ def lock_folder(folder_path: str, password: str) -> str:
     os.replace(temp_path, locked_path)
     shutil.rmtree(folder)
 
-    config = cfg.load_config(password)
+    config = EncryptedDatabase(password)._data
     config["locked_folders"].append({"original_path": str(folder), "locked_path": str(locked_path)})
     audit_log.add_event(config, "folder", str(folder), "locked", str(locked_path))
-    cfg.save_config(config, password)
+    EncryptedDatabase(password).save_dict(config)
     return str(locked_path)
 
 
@@ -119,7 +120,7 @@ def unlock_folder(locked_path: str, password: str, restore_path: str | None = No
     except InvalidToken as exc:
         raise ValueError("Wrong password or corrupted locked folder.") from exc
 
-    config = cfg.load_config(password)
+    config = EncryptedDatabase(password)._data
     match = next((f for f in config["locked_folders"] if Path(f["locked_path"]).resolve() == locked), None)
     if restore_path is None:
         restore = Path(match["original_path"]).expanduser().resolve() if match else locked.with_suffix("")
@@ -142,5 +143,5 @@ def unlock_folder(locked_path: str, password: str, restore_path: str | None = No
         f for f in config["locked_folders"] if Path(f["locked_path"]).resolve() != locked
     ]
     audit_log.add_event(config, "folder", str(restore), "unlocked", str(locked))
-    cfg.save_config(config, password)
+    EncryptedDatabase(password).save_dict(config)
     return str(restore)

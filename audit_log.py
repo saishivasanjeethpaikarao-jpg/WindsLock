@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 import config as cfg
+from database import EncryptedDatabase
 
 
 MAX_EVENTS = cfg.MAX_AUDIT_EVENTS
@@ -30,11 +31,11 @@ def add_event(config: dict[str, Any], event_type: str, target: str, action: str,
 
 
 def record_with_password(password: str, event_type: str, target: str, action: str, detail: str = "") -> None:
-    config = cfg.load_config(password)
+    config = EncryptedDatabase(password)._data
     add_event(config, event_type, target, action, detail)
-    cfg.save_config(config, password)
+    EncryptedDatabase(password).save_dict(config)
 
 
 def list_events(password: str, limit: int = 50) -> list[dict[str, str]]:
-    config = cfg.load_config(password)
+    config = EncryptedDatabase(password)._data
     return list(config.get("audit_log", []))[-limit:]

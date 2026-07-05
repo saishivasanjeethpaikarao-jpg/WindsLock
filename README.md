@@ -1,4 +1,4 @@
-# Windslock
+# Windslock Pro
 
 ![Windslock logo](assets/windslock_logo.png)
 
@@ -7,12 +7,20 @@ apps, websites, URL paths, and private folders. It includes a branded desktop
 UI, tray controller, optional CLI, background enforcer, recovery flow, and pro
 startup tooling.
 
+## Features
+
+- **Modern Premium UI**: Sleek dark/light mode interface built with CustomTkinter.
+- **Cross-Platform Security**: Background enforcement and tamper-proof DB storage using Windows DPAPI or Linux Keyring.
+- **Application Locking**: Block desktop apps dynamically by process name or full path.
+- **Path-level Website Blocking**: Powered by a robust MITM proxy, restrict access to specific paths (e.g., `youtube.com/shorts`) without blocking the whole domain.
+- **Folder Encryption**: AES-level encryption secures local folders from prying eyes.
+- **Robust Database**: Features a zero-leakage `EncryptedDatabase` architecture leveraging Fernet encryption for full DB security.
+
 ## Documentation
 
+- [Mind Maps & Architecture](docs/MIND_MAPS.md)
 - [Brand Guide](docs/BRAND_GUIDE.md)
-- [Mind Maps](docs/MIND_MAPS.md)
 - [Workflows](docs/WORKFLOWS.md)
-- [Architecture](docs/ARCHITECTURE.md)
 - [Windows And Linux Plan](docs/CROSS_PLATFORM_PLAN.md)
 - [Build And Release Guide](docs/BUILD_RELEASES.md)
 - [Roadmap](docs/ROADMAP.md)
@@ -24,33 +32,11 @@ section.
 For normal laptop use, prefer the `Windslock-Windows-OneFile.zip` artifact. It
 contains standalone EXEs and avoids missing `_internal` / Python DLL issues.
 
-## What Works
-
-- Locks desktop apps by process name, such as `steam.exe`, or by full executable path.
-- Blocks websites by domain through reversible Windows hosts-file entries.
-- Blocks URL path prefixes through the mitmproxy addon, for cases like
-  `youtube.com/shorts` while keeping normal YouTube pages available.
-- Supports friction-based temporary overrides: exact phrase, cooldown, limited
-  unlock window, automatic re-lock, and full logging.
-- Locks folders into encrypted `.locked` archives and restores them with the master password.
-- Stores settings in encrypted local config under `%APPDATA%\Windslock`.
-- Uses password-derived key wrapping, password verification hashes, and one-time recovery codes.
-- Can store the config data key with Windows DPAPI for background enforcement without storing the password.
-- Can start background enforcement when the current Windows user signs in.
-- Keeps encrypted audit history of app and folder block/unlock events.
-- Provides a Tkinter desktop UI for managing rules, folders, background mode,
-  startup, recovery, and history.
-- Includes one-click focus presets, timed focus sessions, schedule-only mode,
-  weekly schedules, and a running-app picker.
-- Includes a tray controller, pro startup task scripts, and optional portable
-  EXE build script.
-
 ## Setup
 
 Install Python 3.11+ and dependencies:
 
 ```powershell
-cd D:\Windslock\files
 py -m pip install -r requirements.txt
 run_windslock.bat
 ```
@@ -70,31 +56,31 @@ codes. Store those codes outside the app folder.
 Run the desktop app:
 
 ```powershell
-D:\Windslock\files\run_windslock.bat
+run_windslock.bat
 ```
 
 Run the pro launcher with tray + UI:
 
 ```powershell
-D:\Windslock\files\run_windslock_pro.bat
+run_windslock_pro.bat
 ```
 
 Run only the tray controller:
 
 ```powershell
-D:\Windslock\files\run_tray.bat
+run_tray.bat
 ```
 
 Run as administrator when applying website blocks to the real Windows hosts file:
 
 ```powershell
-D:\Windslock\files\run_windslock_admin.bat
+run_windslock_admin.bat
 ```
 
 Run the older command-line menu:
 
 ```powershell
-D:\Windslock\files\run_cli.bat
+run_cli.bat
 ```
 
 ## Pro Startup And Tray
@@ -109,14 +95,14 @@ The tray controller gives quick access to:
 For more reliable startup than the registry Run key, install the scheduled task:
 
 ```powershell
-D:\Windslock\files\install_startup_task.bat
+install_startup_task.bat
 ```
 
 Run it as administrator if you want Windows to create the task with highest
 privileges. Remove it with:
 
 ```powershell
-D:\Windslock\files\uninstall_startup_task.bat
+uninstall_startup_task.bat
 ```
 
 Why Task Scheduler instead of a LocalSystem service: Windslock uses current-user
@@ -130,14 +116,14 @@ credential/key handoff and installer flow.
 Build local portable executables with:
 
 ```powershell
-D:\Windslock\files\build_portable_exe.bat
+build_portable_exe.bat
 ```
 
 Outputs:
 
 ```text
-D:\Windslock\files\dist\Windslock\Windslock.exe
-D:\Windslock\files\dist\WindslockTray\WindslockTray.exe
+dist\Windslock\Windslock.exe
+dist\WindslockTray\WindslockTray.exe
 ```
 
 Common actions:
@@ -180,7 +166,7 @@ only `youtube.com/shorts`. For path-level rules, Windslock includes a mitmproxy
 addon:
 
 ```powershell
-D:\Windslock\files\run_proxy.bat
+run_proxy.bat
 ```
 
 Then configure the browser or Windows proxy settings to use:
@@ -193,7 +179,7 @@ Port:        8080
 For HTTPS websites, install mitmproxy's local certificate once:
 
 ```powershell
-D:\Windslock\files\open_proxy_cert_help.bat
+open_proxy_cert_help.bat
 ```
 
 That opens `http://mitm.it` while the proxy is running. Follow the Windows cert
@@ -267,7 +253,7 @@ Safety notes:
 Background enforcement is a normal user-session Python process, not a Windows
 kernel driver or enterprise AppLocker policy. It polls running processes and
 kills matches. When enabled, it stores only the encrypted config data key through
-Windows DPAPI for the current user.
+Windows DPAPI or Linux Keyring for the current user.
 
 Limits:
 
@@ -279,8 +265,8 @@ Limits:
 
 Current protections are basic:
 
-- Config is encrypted.
-- Background unlock uses DPAPI for the current Windows user.
+- Config is encrypted via `EncryptedDatabase`.
+- Background unlock uses OS secure store (DPAPI/Keyring).
 - Optional ACL hardening restricts the config folder to the current user, Administrators, and SYSTEM.
 - Startup registration can restart enforcement at login.
 
@@ -303,29 +289,7 @@ Recovery codes are one-time because resetting the password rotates all codes.
 Automated tests use temporary app data and do not touch your real config:
 
 ```powershell
-cd D:\Windslock\files
 py -m unittest discover -s tests -v
 ```
 
-Manual Windows tests:
-
-1. First-run setup: delete or move `%APPDATA%\Windslock` only if you intentionally want a fresh test profile, then run `run_windslock.bat` and confirm recovery codes appear.
-2. UI smoke test: open every tab, add/remove one harmless app rule and one harmless domain rule.
-3. Focus preset: apply `Deep Work`, confirm apps/sites/path rules appear.
-4. Focus session: enable schedule-only mode, start a short session, and confirm rules enforce only during that session.
-5. App blocking: add `notepad.exe`, start background enforcement, open Notepad, and confirm it is killed and logged.
-6. Path blocking: add the full path of a harmless test executable and confirm only that path is blocked.
-7. Website blocking: run `run_windslock_admin.bat`, add `example.com`, apply hosts entries, confirm the marked block appears in hosts, then roll it back.
-8. Path-level blocking: add `youtube.com` + `/shorts`, run `run_proxy.bat`, configure proxy/cert, and confirm `/shorts` is blocked while normal YouTube pages still load.
-9. Override denial: request an override with the wrong phrase and confirm it is denied and logged.
-10. Override activation: request with the correct phrase, confirm it stays locked during cooldown, unlocks after cooldown, and re-locks after the window.
-11. Folder locking: create a disposable test folder, lock it, confirm `.locked` exists and the folder is removed, then unlock it and verify files return.
-12. Background enforcement: enable background enforcement, close the UI, launch a blocked app, and confirm it is still killed.
-13. Start with Windows: enable startup, sign out/in, and confirm `enforcer.py` starts for your user.
-14. Recovery: use a test profile, reset with a recovery code, confirm the old password and old recovery code no longer work.
-
-## Project Notes
-
-The active top-level files are in `D:\Windslock\files`. The nested
-`D:\Windslock\files\files` folder appears to be an older duplicate and is left
-in place intentionally.
+Manual tests can be run safely using dummy profiles.

@@ -8,6 +8,7 @@ from typing import Any
 import app_blocker
 import audit_log
 import config as cfg
+from database import EncryptedDatabase
 import site_blocker
 import url_rule_engine
 
@@ -58,34 +59,34 @@ def apply_preset(password: str, preset_name: str) -> None:
         site_blocker.add_blocked_site(str(site), password)
     for domain, path_prefix in preset["paths"]:
         url_rule_engine.add_path_rule(domain, path_prefix, password)
-    config = cfg.load_config(password)
+    config = EncryptedDatabase(password)._data
     audit_log.add_event(config, "preset", preset_name, "applied", "added preset rules")
-    cfg.save_config(config, password)
+    EncryptedDatabase(password).save_dict(config)
 
 
 def start_focus_session(password: str, minutes: int) -> str:
     if minutes < 1:
         raise ValueError("Focus session must be at least 1 minute.")
     until = _now() + timedelta(minutes=minutes)
-    config = cfg.load_config(password)
+    config = EncryptedDatabase(password)._data
     config["settings"]["focus_session_until"] = until.isoformat(timespec="seconds")
     audit_log.add_event(config, "focus", "session", "started", f"until={config['settings']['focus_session_until']}")
-    cfg.save_config(config, password)
+    EncryptedDatabase(password).save_dict(config)
     return config["settings"]["focus_session_until"]
 
 
 def stop_focus_session(password: str) -> None:
-    config = cfg.load_config(password)
+    config = EncryptedDatabase(password)._data
     config["settings"]["focus_session_until"] = ""
     audit_log.add_event(config, "focus", "session", "stopped", "")
-    cfg.save_config(config, password)
+    EncryptedDatabase(password).save_dict(config)
 
 
 def set_schedule_only_mode(password: str, enabled: bool) -> None:
-    config = cfg.load_config(password)
+    config = EncryptedDatabase(password)._data
     config["settings"]["schedule_only_mode"] = bool(enabled)
     audit_log.add_event(config, "focus", "schedule_only_mode", "enabled" if enabled else "disabled", "")
-    cfg.save_config(config, password)
+    EncryptedDatabase(password).save_dict(config)
 
 
 def add_schedule(password: str, name: str, days: list[int], start: str, end: str) -> None:
@@ -93,21 +94,21 @@ def add_schedule(password: str, name: str, days: list[int], start: str, end: str
     _parse_hhmm(end)
     if not days:
         raise ValueError("Choose at least one day.")
-    config = cfg.load_config(password)
+    config = EncryptedDatabase(password)._data
     config["focus_schedules"].append(
         {"name": name.strip() or "Focus", "days": sorted(set(days)), "start": start, "end": end, "enabled": True}
     )
     audit_log.add_event(config, "focus", name or "Focus", "schedule_added", f"{days} {start}-{end}")
-    cfg.save_config(config, password)
+    EncryptedDatabase(password).save_dict(config)
 
 
 def remove_schedule(password: str, index: int) -> None:
-    config = cfg.load_config(password)
+    config = EncryptedDatabase(password)._data
     schedules = list(config.get("focus_schedules", []))
     removed = schedules.pop(index)
     config["focus_schedules"] = schedules
     audit_log.add_event(config, "focus", removed.get("name", "Focus"), "schedule_removed", "")
-    cfg.save_config(config, password)
+    EncryptedDatabase(password).save_dict(config)
 
 
 def is_session_active(config: dict[str, Any], now: datetime | None = None) -> bool:

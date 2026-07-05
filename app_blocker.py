@@ -7,6 +7,7 @@ import time
 from typing import Any
 
 import config as cfg
+from database import EncryptedDatabase
 import override_manager
 
 try:
@@ -35,24 +36,24 @@ def _rule_key(rule: dict[str, str]) -> tuple[str, str]:
 
 
 def add_locked_app(exe_name_or_path: str, password: str) -> None:
-    config = cfg.load_config(password)
+    config = EncryptedDatabase(password)._data
     rule = normalize_app_rule(exe_name_or_path)
     rules = config.get("locked_apps", [])
     if _rule_key(rule) not in {_rule_key(r) for r in rules}:
         rules.append(rule)
         config["locked_apps"] = rules
-        cfg.save_config(config, password)
+        EncryptedDatabase(password).save_dict(config)
 
 
 def remove_locked_app(exe_name_or_path: str, password: str) -> None:
-    config = cfg.load_config(password)
+    config = EncryptedDatabase(password)._data
     rule = normalize_app_rule(exe_name_or_path)
     config["locked_apps"] = [r for r in config.get("locked_apps", []) if _rule_key(r) != _rule_key(rule)]
-    cfg.save_config(config, password)
+    EncryptedDatabase(password).save_dict(config)
 
 
 def list_locked_apps(password: str) -> list[dict[str, str]]:
-    config = cfg.load_config(password)
+    config = EncryptedDatabase(password)._data
     return list(config.get("locked_apps", []))
 
 
@@ -125,11 +126,11 @@ def start_watching(password: str, poll_interval: float = 1.5, on_block=None) -> 
     print(f"App watcher running every {poll_interval}s. Press Ctrl+C to stop.")
     try:
         while True:
-            config = cfg.load_config(password)
+            config = EncryptedDatabase(password)._data
             locked = list(config.get("locked_apps", []))
             changed = override_manager.process_overrides(config)
             if changed:
-                cfg.save_config(config, password)
+                EncryptedDatabase(password).save_dict(config)
             if locked:
                 for event in watch_once(locked, config):
                     if on_block:
