@@ -1018,7 +1018,175 @@ class WindslockApp(ctk.CTk):
         self.destroy()
 
 
+class LockScreenWindow(ctk.CTk):
+    def __init__(self, target: str):
+        super().__init__()
+        import os
+        self.target = target
+        self.title("Windslock - App Locked")
+        self.geometry("480x300")
+        self.resizable(False, False)
+        self.configure(fg_color=WINDOW_BG)
+        
+        # Center the window
+        self.update_idletasks()
+        width = 480
+        height = 300
+        x = (self.winfo_screenwidth() // 2) - (width // 2)
+        y = (self.winfo_screenheight() // 2) - (height // 2)
+        self.geometry(f"{width}x{height}+{x}+{y}")
+        
+        # Attempt to set window icon
+        try:
+            if brand.icon_ico().exists():
+                self.iconbitmap(str(brand.icon_ico()))
+        except Exception:
+            pass
+            
+        # Top-most / focus
+        self.attributes("-topmost", True)
+        self.focus_force()
+        
+        self._build_ui()
+
+    def _build_ui(self):
+        import os
+        container = ctk.CTkFrame(self, fg_color=PANEL_BG, border_color=BORDER, border_width=1, corner_radius=14)
+        container.pack(fill="both", expand=True, padx=16, pady=16)
+        
+        # Header
+        header_lbl = ctk.CTkLabel(container, text="🔒 App Locked", font=("Segoe UI", 20, "bold"), text_color=DANGER)
+        header_lbl.pack(anchor="w", padx=20, pady=(20, 4))
+        
+        display_name = os.path.basename(self.target)
+        desc_lbl = ctk.CTkLabel(
+            container, 
+            text=f"'{display_name}' has been locked to keep you focused.", 
+            font=("Segoe UI", 12),
+            text_color=TEXT_MAIN,
+            wraplength=400,
+            justify="left"
+        )
+        desc_lbl.pack(anchor="w", padx=20, pady=(0, 16))
+        
+        # Password entry
+        pwd_label = ctk.CTkLabel(container, text="Enter Master Password to unlock:", font=("Segoe UI", 11, "bold"), text_color=TEXT_MUTED)
+        pwd_label.pack(anchor="w", padx=20, pady=(0, 4))
+        
+        self.password_entry = ctk.CTkEntry(container, show="*", height=36, placeholder_text="Password")
+        self.password_entry.pack(fill="x", padx=20, pady=(0, 8))
+        self.password_entry.focus()
+        
+        # Bind Return key to unlock_app
+        self.password_entry.bind("<Return>", lambda e: self.unlock_app())
+        
+        # Error Label
+        self.error_label = ctk.CTkLabel(container, text="", font=("Segoe UI", 11), text_color=DANGER)
+        self.error_label.pack(anchor="w", padx=20, pady=(0, 8))
+        
+        # Buttons
+        btn_frame = ctk.CTkFrame(container, fg_color="transparent")
+        btn_frame.pack(fill="x", padx=20, pady=(8, 16))
+        
+        self.unlock_app_btn = ctk.CTkButton(
+            btn_frame, 
+            text="Unlock App", 
+            command=self.unlock_app, 
+            fg_color=ACCENT, 
+            hover_color=ACCENT_HOVER,
+            text_color="#FFFFFF",
+            font=("Segoe UI", 11, "bold"),
+            height=32
+        )
+        self.unlock_app_btn.pack(side="left", padx=(0, 8))
+        
+        self.unlock_all_btn = ctk.CTkButton(
+            btn_frame, 
+            text="Unlock All", 
+            command=self.unlock_all, 
+            fg_color=SUCCESS, 
+            hover_color="#15803D",
+            text_color="#FFFFFF",
+            font=("Segoe UI", 11, "bold"),
+            height=32
+        )
+        self.unlock_all_btn.pack(side="left", padx=(0, 8))
+        
+        self.cancel_btn = ctk.CTkButton(
+            btn_frame, 
+            text="Cancel", 
+            command=self.destroy, 
+            fg_color=PANEL_ALT, 
+            hover_color="#CBD5E1",
+            text_color=TEXT_MAIN,
+            font=("Segoe UI", 11, "bold"),
+            height=32
+        )
+        self.cancel_btn.pack(side="right")
+        
+    def unlock_app(self):
+        import os
+        password = self.password_entry.get()
+        if not password:
+            self.error_label.configure(text="Password cannot be empty.")
+            return
+            
+        if not cfg.verify_password(password):
+            self.error_label.configure(text="Incorrect master password.")
+            return
+            
+        try:
+            config = cfg.load_config(password)
+            minutes = int(config["settings"].get("password_unlock_minutes", 10))
+            override_manager.password_unlock(password, "app", self.target, minutes)
+            messagebox.showinfo("Windslock", f"'{os.path.basename(self.target)}' has been unlocked for {minutes} minutes.")
+            self.destroy()
+        except Exception as exc:
+            self.error_label.configure(text=f"Error: {exc}")
+            
+    def unlock_all(self):
+        password = self.password_entry.get()
+        if not password:
+            self.error_label.configure(text="Password cannot be empty.")
+            return
+            
+        if not cfg.verify_password(password):
+            self.error_label.configure(text="Incorrect master password.")
+            return
+            
+        try:
+            config = cfg.load_config(password)
+            minutes = int(config["settings"].get("password_unlock_minutes", 10))
+            override_manager.password_unlock(password, "system", "all", minutes)
+            messagebox.showinfo("Windslock", f"All protection rules unlocked for {minutes} minutes.")
+            self.destroy()
+        except Exception as exc:
+            self.error_label.configure(text=f"Error: {exc}")
+
+
+def run_lock_screen(target: str) -> None:
+    ctk.set_appearance_mode('System')
+    ctk.set_default_color_theme('blue')
+    app = LockScreenWindow(target)
+    app.mainloop()
+
+
 def open_app() -> None:
+    import sys
+    
+    lock_target = None
+    if "--lock-screen" in sys.argv:
+        try:
+            idx = sys.argv.index("--lock-screen")
+            if idx + 1 < len(sys.argv):
+                lock_target = sys.argv[idx + 1]
+        except ValueError:
+            pass
+            
+    if lock_target:
+        run_lock_screen(lock_target)
+        return
+
     root = ctk.CTk()
     root.withdraw()
     if not cfg.master_password_is_set():

@@ -135,6 +135,9 @@ def active_schedule(config: dict[str, Any], now: datetime | None = None) -> dict
 
 
 def should_enforce(config: dict[str, Any], now: datetime | None = None) -> bool:
+    import override_manager
+    if override_manager.is_overridden(config, "system", "all", now):
+        return False
     if not config.get("settings", {}).get("schedule_only_mode", False):
         return True
     return is_session_active(config, now) or active_schedule(config, now) is not None

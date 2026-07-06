@@ -191,3 +191,27 @@ def stop_enforcer() -> bool:
         return True
     except app_blocker.psutil.Error:
         return False
+
+
+def is_lock_screen_running(target: str) -> bool:
+    if app_blocker.psutil is None:
+        return False
+    target_normalized = target.replace("\\", "/").lower()
+    for proc in app_blocker.psutil.process_iter(["name", "cmdline"]):
+        try:
+            cmdline = proc.info.get("cmdline") or []
+            cmdline_str = " ".join(cmdline).replace("\\", "/").lower()
+            if ("gui.py" in cmdline_str or "windslock" in cmdline_str) and "--lock-screen" in cmdline_str:
+                if target_normalized in cmdline_str:
+                    return True
+        except Exception:
+            continue
+    return False
+
+
+def open_lock_screen(target: str) -> None:
+    packaged_gui = _packaged_executable("Windslock")
+    if packaged_gui and packaged_gui != Path(sys.executable):
+        subprocess.Popen([str(packaged_gui), "--lock-screen", target], close_fds=True)
+        return
+    subprocess.Popen([str(pythonw_executable()), str(gui_script()), "--lock-screen", target], close_fds=True)

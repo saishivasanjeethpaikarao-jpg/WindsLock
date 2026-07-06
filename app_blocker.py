@@ -176,7 +176,8 @@ def start_watching(password: str, poll_interval: float = 1.5, on_block=None) -> 
             changed = override_manager.process_overrides(config)
             if changed:
                 EncryptedDatabase(password).save_dict(config)
-            if locked:
+            import focus_manager
+            if locked and focus_manager.should_enforce(config):
                 for event in watch_once(locked, config):
                     if on_block:
                         on_block(event)

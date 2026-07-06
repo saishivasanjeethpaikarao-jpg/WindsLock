@@ -13,6 +13,7 @@ import config as cfg
 from database import EncryptedDatabase
 import focus_manager
 import override_manager
+import runtime_control
 import site_blocker
 
 
@@ -91,6 +92,18 @@ def run_forever(poll_interval: float = POLL_INTERVAL_SECONDS) -> None:
                         f"pid={event['pid']}",
                     )
                     changed = True
+                    if event["action"] == "killed":
+                        try:
+                            if not runtime_control.is_lock_screen_running(event["target"]):
+                                runtime_control.open_lock_screen(event["target"])
+                        except Exception as exc:
+                            audit_log.add_event(
+                                config,
+                                "app",
+                                event["target"],
+                                "lock_screen_failed",
+                                str(exc),
+                            )
 
             now = time.monotonic()
             hosts_due = now - last_hosts_refresh > HOSTS_REFRESH_SECONDS

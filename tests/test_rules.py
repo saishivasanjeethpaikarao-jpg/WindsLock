@@ -115,6 +115,22 @@ class RuleTests(unittest.TestCase):
         self.assertFalse(fake_proc.killed)
         self.assertEqual("detected", events[0]["action"])
 
+    def test_is_lock_screen_running(self):
+        import runtime_control
+        fake_proc_active = _FakeProcess("pythonw.exe")
+        fake_proc_active.info["cmdline"] = ["pythonw.exe", "gui.py", "--lock-screen", "codex.exe"]
+        
+        fake_proc_inactive = _FakeProcess("pythonw.exe")
+        fake_proc_inactive.info["cmdline"] = ["pythonw.exe", "gui.py", "--lock-screen", "other.exe"]
+        
+        original_psutil = app_blocker.psutil
+        app_blocker.psutil = _FakePsutil([fake_proc_active, fake_proc_inactive])
+        try:
+            self.assertTrue(runtime_control.is_lock_screen_running("codex.exe"))
+            self.assertFalse(runtime_control.is_lock_screen_running("different.exe"))
+        finally:
+            app_blocker.psutil = original_psutil
+
 
 class _FakeProcess:
     def __init__(self, name: str):

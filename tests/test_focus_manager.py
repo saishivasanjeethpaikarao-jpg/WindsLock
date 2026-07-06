@@ -50,6 +50,16 @@ class FocusManagerTests(unittest.TestCase):
         self.assertTrue(focus_manager.should_enforce(data, monday_inside))
         self.assertFalse(focus_manager.should_enforce(data, monday_outside))
 
+    def test_system_override_disables_enforcement(self):
+        focus_manager.start_focus_session("test password", 30)
+        data = EncryptedDatabase("test password")._data
+        self.assertTrue(focus_manager.should_enforce(data))
+
+        import override_manager
+        override_manager.password_unlock("test password", "system", "all", 10)
+        data = EncryptedDatabase("test password")._data
+        self.assertFalse(focus_manager.should_enforce(data))
+
 
 if __name__ == "__main__":
     unittest.main()
