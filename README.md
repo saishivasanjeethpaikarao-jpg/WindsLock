@@ -78,3 +78,27 @@ Build and release details are documented in [docs/BUILD_RELEASES.md](docs/BUILD_
 ## Security notes
 
 WindsLock is still a prototype. Keep backups, review the code before protecting important data, and use signed releases for wider distribution. Do not install the local proxy certificate unless you understand and accept the HTTPS inspection model.
+
+## Enforcement flow
+
+```mermaid
+flowchart TD
+    G[GUI control center<br/>CustomTkinter] --> CFG[Rules config<br/>apps, domains, sessions]
+    CFG --> FM[Focus manager<br/>timed sessions, presets, schedules]
+    FM --> E{Enforcer checks each process / request}
+    E -- app on blocklist --> B1[Stop process<br/>or log in detect mode]
+    E -- domain on blocklist --> B2[Reversible hosts-file entry<br/>or local mitmproxy filter]
+    E -- override requested --> O[Temporary password override<br/>logged to audit trail]
+    B1 & B2 & O --> AUD[Activity history + audit log]
+    FL[Folder encryption<br/>Fernet] --> RC[Recovery codes<br/>outside the project folder]
+```
+
+## At a glance
+
+```mermaid
+flowchart LR
+    START[Launch] --> P[Create master password<br/>store recovery codes]
+    P --> S[Set rules or start a focus session]
+    S --> BG[Background enforcement + tray control]
+    BG --> END[Session ends<br/>blocks lift automatically]
+```
